@@ -1264,7 +1264,7 @@ export default {
     const issueRefs = Array.isArray(rawIssue?.refs)
       ? [...new Set(rawIssue.refs.filter(x => typeof x === "string")
           .map(x => x.trim().toUpperCase().replace(/[–—]/g, "-"))
-          .filter(x => /^(?:АТ|МС)-\\d{3}$/.test(x)))].slice(0, 6) : [];
+          .filter(x => /^(?:АТ|МС)-\d{3}$/.test(x)))].slice(0, 6) : [];
     const issueStatus = rawIssue?.status === "contradiction" ||
       rawIssue?.status === "scope_difference" ? rawIssue.status : "none";
     const issueSubject = typeof rawIssue?.subject === "string"
@@ -1276,7 +1276,7 @@ export default {
       hasSourceSearch && sources.length > 0 && issueStatus !== "none" &&
       issueRefs.length >= 2 && !!issueSubject && !!issueSignificance &&
       issueRefs.every(id => answer.includes(id)) &&
-      /неузгоджен|відмінн[а-яіїєґ]*\\s+(?:критері|визначенн|підход)|розбіжн|суперечн/iu.test(answer);
+      /неузгоджен|відмінн[а-яіїєґ]*\s+(?:критері|визначенн|підход)|розбіжн|суперечн/iu.test(answer);
     const issueKey = issueIsGrounded ? issueRefs.slice().sort().join("|") : "";
     const alreadyInvitedOnIssue = issueKey &&
       (Array.isArray(body.source_issue_keys) &&
