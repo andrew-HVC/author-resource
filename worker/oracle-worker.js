@@ -327,7 +327,10 @@ export default {
     // about the author's proposal, even without its formal title.
     const authorModelAllusion =
       /ви\s+(?:говорите|пишете|стверджуєте)\s+про\s+цілісн[а-яіїєґ]*\s+організаці[а-яіїєґ]*\s+середовищ/iu.test(question);
+    const asksStrategyOfInfluence =
+      /стратегі[яюєї][а-яіїєґ]*\s+вплив[а-яіїєґ]*/iu.test(question);
     const directModelInquiry =
+      asksStrategyOfInfluence ||
       /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(question) ||
       /(?:МС|АТ)[-–—]\s*\d{3}\b|фрактальн[а-яіїєґ]*\s+економік/iu.test(question) ||
       shorthandModel || authorModelAllusion;
@@ -1181,6 +1184,37 @@ export default {
         (phase === "model" && asksRelevantEpistemeList ? " " + enterpriseInfrastructureSourceInstructions : "") +
         (phase === "model" && asksObjectReproduction ? " " + economicReproductionInstructions : "")
       : stageInstructions;
+    const strategyOfInfluenceInstructions = [
+      "На запит про «Стратегію впливу» не обмежуйся загальним визначенням,",
+      "циклом методу або тезою про ієрархію факторів.",
+      "ОБОВ'ЯЗКОВО покажи чинну конкретну ієрархію визначальних",
+      "впливів у просторовій Моделі середовища в такому порядку:",
+      "1. Екологічний каркас; 2. Енергетична система;",
+      "3. Лінійний інфраструктурний каркас;",
+      "4. Єдиний типологічний об'єм; 5. Біотехнологічний комплекс;",
+      "6. Несуча здатність; 7. Кластери;",
+      "8. Соціально-адміністративна формація.",
+      "Для КОЖНОГО рівня в окремому пункті поясни, чому він визначає",
+      "умови, межі або можливості наступного.",
+      "Природні умови й екокаркас визначають межі втручання;",
+      "енергетика — можливості забезпечення наступних систем;",
+      "інфраструктура — зв'язки й умови розміщення;",
+      "типологічні об'єми — просторово-функціональні умови;",
+      "біотехнологічний комплекс — агровиробничі спроможності;",
+      "після ресурсного балансу й аналізу попередніх систем",
+      "розраховується несуча здатність, а не задається наперед;",
+      "вона та просторові зв'язки визначають можливості кластерів;",
+      "від кластерної організації залежить соціально-адміністративна.",
+      "Агрополя є складовою біотехнологічного комплексу,",
+      "а не окремою ланкою верхньої ієрархії.",
+      "Це ієрархія визначальних ВПЛИВІВ, а не просто хронологія",
+      "проєктних СТАДІЙ. Зворотні впливи не скасовують пріоритетів.",
+      "Стратегія впливу застосовується всередині кожної проєктної стадії.",
+      "Спершу коротко дай визначення; потім повний конкретний порядок",
+      "з причинними поясненнями, далі зворотні впливи і верифікацію.",
+      "Зістав із підключеними авторськими джерелами. Не стверджуй,",
+      "що ефективність цього методу вже доведена."
+    ].join(" ");
     const authorPrivacyInstructions = [
       "Конфіденційність автора: особа автора Моделі середовища не розкривається.",
       "Не називай ім’я, прізвище, псевдонім, біографічні чи особисті",
@@ -1198,7 +1232,8 @@ export default {
         ? " " + coercionRiskInstructions : "") +
       (phase === "model" && hasSpatialModelContext && asksSpatialBenefits
         ? " " + spatialDemoStageInstructions : "") +
-      " " + authorPrivacyInstructions;
+      " " + authorPrivacyInstructions +
+      (asksStrategyOfInfluence ? " " + strategyOfInfluenceInstructions : "");
 
     let response;
     try {
@@ -1343,6 +1378,43 @@ export default {
     while (answerLines.length > 1 && isNavigationParagraph(answerLines[answerLines.length - 1]))
       answerLines.pop();
     let answer = answerLines.join("\n\n").trim();
+    // Concrete hierarchy is mandatory for a direct Strategy-of-Influence
+    // question; source retrieval can otherwise return only a general method.
+    if (asksStrategyOfInfluence) {
+      const orderedLevels = [
+        /екологічн[а-яіїєґ]*\s+каркас/iu,
+        /енергетичн[а-яіїєґ]*\s+(?:систем|архітектур)/iu,
+        /лінійн[а-яіїєґ]*\s+інфраструктурн[а-яіїєґ]*\s+каркас/iu,
+        /єдин[а-яіїєґ]*\s+типологічн[а-яіїєґ]*\s+об['’ʼ]єм/iu,
+        /біотехнологічн[а-яіїєґ]*\s+комплекс/iu,
+        /несуч[а-яіїєґ]*\s+здатн/iu,
+        /кластер/iu,
+        /соціально[-–]?адміністративн[а-яіїєґ]*\s+формаці/iu
+      ];
+      let cursor = 0;
+      const hasFullHierarchy = orderedLevels.every(pattern => {
+        const m = pattern.exec(answer.slice(cursor));
+        if (!m) return false;
+        cursor += m.index + m[0].length;
+        return true;
+      });
+      if (!hasFullHierarchy) {
+        const canonicalHierarchy = [
+          "**Чинна ієрархія визначальних впливів у просторовому контурі Моделі середовища:**",
+          "- **Екологічний каркас** — на основі природних умов визначає межі антропогенного втручання й просторові обмеження.",
+          "- **Енергетична система** — з урахуванням екологічних умов та потенціалу території визначає можливості генерації, накопичення й забезпечення наступних систем.",
+          "- **Лінійний інфраструктурний каркас** — у межах природних і енергетичних умов задає транспортні, інженерні та логістичні зв'язки.",
+          "- **Єдиний типологічний об'єм** — його розміщення та організація випливають із сформованої інфраструктурної архітектури.",
+          "- **Біотехнологічний комплекс** — у визначених просторових і ресурсних умовах забезпечує агровиробничі спроможності; мультикультурні поля належать до цього комплексу.",
+          "- **Несуча здатність** — розраховується за екологічними, енергетичними, інфраструктурними, виробничими спроможностями та ресурсним балансом; її не призначають довільно наперед.",
+          "- **Кластери** — їхні межі й спроможності випливають із розрахованої несучої здатності та просторово-ресурсної структури.",
+          "- **Соціально-адміністративна формація** — формується відповідно до організації кластерів і їхніх можливостей.",
+          "Це ієрархія визначальних впливів, не просто порядок проєктних робіт. Зворотні впливи враховуються, а сама Стратегія впливу застосовується всередині кожної проєктної стадії."
+        ].join("\n");
+        answer = answer ? answer + "\n\n" + canonicalHierarchy : canonicalHierarchy;
+      }
+    }
+
     // Source-backed safety check for a particular known definition mismatch:
     // compatibility of private ownership with shared obligations does NOT
     // resolve the different Atlas and episteme classification criteria.
@@ -1523,7 +1595,9 @@ export default {
     // A conceptual route must gain altitude. An initial building-level
     // discussion becomes a system-level question; the next opt-in choice
     // explicitly opens structural alternatives without naming the Model yet.
-    const conceptualNext = phase === "open" && topic === "economy"
+    const conceptualNext = asksStrategyOfInfluence
+      ? "Чому екологічний каркас має визначати енергетичні, інфраструктурні та просторові рішення, а не навпаки?"
+      : phase === "open" && topic === "economy"
       ? "Як якісно нові потреби та виробничі можливості взаємно змінюють структуру економічної системи?"
       : phase === "systems" && topic === "economy"
       ? "Які альтернативні принципи економічної організації можуть узгоджувати потреби, виробництво та облік вартості?"
@@ -1546,7 +1620,9 @@ export default {
       : phase === "model" && topic === "recovery"
       ? "Як у Моделі середовища екологічні умови визначають енергетику, інфраструктуру й розселення?"
       : null;
-    const practicalNext = phase === "open" && topic === "economy"
+    const practicalNext = asksStrategyOfInfluence
+      ? "Як розрахунок несучої здатності визначає формування кластерів і які дані для цього потрібні?"
+      : phase === "open" && topic === "economy"
       ? "Як взаємні зміни попиту й пропозиції вплинуть на виробничі ланцюги та можливості підприємств?"
       : phase === "systems" && topic === "economy"
       ? "За якими економічними показниками порівняти різні механізми узгодження потреб і виробництва?"
