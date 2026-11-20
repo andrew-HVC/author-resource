@@ -362,6 +362,10 @@ export default {
       .replace(/\uE200filecite\uE202[\s\S]*?\uE201/g, "")
       .trim();
 
+    // During broad strategic exploration, do not reveal the Model indirectly
+    // through source labels, jargon chips, or a premature participation CTA.
+    const introducedModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїє]*\s+модел/i.test(answer);
+
     // Structured navigation: a conceptual question and a practical-effects
     // question, both generated in this same model call (no extra API call).
     const seen = new Set([question.toLocaleLowerCase("uk")]);
@@ -381,7 +385,7 @@ export default {
     const term = typeof parsed?.related_term === "string"
       ? parsed.related_term.trim().replace(/\s+/g, " ")
       : "";
-    if (term && term.length <= 60 && suggestions.length === 2) {
+    if (introducedModel && term && term.length <= 60 && suggestions.length === 2) {
       const query = "Що означає термін «" + term + "» у Моделі середовища?";
       const key = query.toLocaleLowerCase("uk");
       if (!seen.has(key))
@@ -391,10 +395,10 @@ export default {
     return json({
       answer: answer ||
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше.",
-      sources,
+      sources: introducedModel ? sources : [],
       suggestions,
-      engagement_offer: Boolean(parsed?.engagement_offer),
-      engagement_focus: parsed?.engagement_offer &&
+      engagement_offer: introducedModel && Boolean(parsed?.engagement_offer),
+      engagement_focus: introducedModel && parsed?.engagement_offer &&
         ["demo", "general"].includes(parsed?.engagement_focus)
         ? parsed.engagement_focus : "none",
       truncated
