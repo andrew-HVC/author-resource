@@ -493,6 +493,16 @@ export default {
       ["Какие новые компетенции и партнёрства могут понадобиться вашей организации?",
        "Какие риски следует проверить перед выбором пути развития?"]
     ] : fallbacks[topic];
+    const activeRoutes = namesModel ? [
+      [
+        "Як пов'язані між собою основні принципи Моделі середовища?",
+        "Які системні взаємозв'язки визначають архітектуру Моделі середовища?"
+      ],
+      [
+        "Які твердження Моделі середовища потрібно перевірити першочергово?",
+        "Які дані потрібні для перевірки ключових рішень Моделі середовища?"
+      ]
+    ] : routes;
     const addRoute = (candidate, alternatives) => {
       if (addQuestion(candidate)) return;
       for (const option of alternatives) {
@@ -501,8 +511,8 @@ export default {
     };
     if (parsed) {
       // Conceptual breadth first, practical consequences second.
-      addRoute(parsed.conceptual_question, routes[0]);
-      addRoute(parsed.practical_question, routes[1]);
+      addRoute(parsed.conceptual_question, activeRoutes[0]);
+      addRoute(parsed.practical_question, activeRoutes[1]);
     }
 
     // A precise source-backed term can be offered as an optional third question.
