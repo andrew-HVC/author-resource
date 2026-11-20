@@ -288,8 +288,11 @@ export default {
       "Демонстраційну модель, авторські інвестиційні об'єкти або участь у них.",
       "Не вставляй презентацію авторської Моделі як додатковий абзац:",
       "її слід відкривати лише за змістовним запитом на конкретну альтернативу.",
-      "conceptual_question має поглиблювати системні взаємозв'язки й",
-      "стратегічні зміни, не називаючи Модель і не нав'язуючи її механізми.",
+      "conceptual_question веде на один рівень глибше: від галузевих",
+      "сценаріїв до взаємозв'язків і принципів організації систем.",
+      "За наявності інтересу до цих зв'язків запитай про можливі інші",
+      "принципи організації без назви авторської Моделі.",
+      "Не перескакуй одразу до презентації конкретної концепції.",
       "practical_question має відкривати наслідки сценаріїв для діяльності,",
       "клієнтських потреб, бізнес-моделі, ресурсів і довгострокових ризиків.",
       "Завжди створюй ОБИДВА різні питання, кожне до 140 символів.",
@@ -476,6 +479,20 @@ export default {
          "За якими ознаками порівнювати можливі шляхи розвитку?"]
       ]
     };
+    // Keep fallback language consistent with the visitor's question.
+    const english = /[a-z]{3}/i.test(question) && !/[а-яіїєґ]/i.test(question);
+    const russian = /[ыэъё]/i.test(question) && !/[іїєґ]/i.test(question);
+    const routes = english ? [
+      ["How could the relationship between production, infrastructure, and resources change this field?",
+       "What new principles could reshape the way these systems are organized?"],
+      ["Which new partnerships and capabilities might create opportunities for your organization?",
+       "What practical risks and trade-offs should be assessed before choosing a development path?"]
+    ] : russian ? [
+      ["Как связи между производством, инфраструктурой и ресурсами изменят развитие этой отрасли?",
+       "Какие новые принципы могут изменить организацию взаимосвязанных систем?"],
+      ["Какие новые компетенции и партнёрства могут понадобиться вашей организации?",
+       "Какие риски следует проверить перед выбором пути развития?"]
+    ] : fallbacks[topic];
     const addRoute = (candidate, alternatives) => {
       if (addQuestion(candidate)) return;
       for (const option of alternatives) {
@@ -484,8 +501,8 @@ export default {
     };
     if (parsed) {
       // Conceptual breadth first, practical consequences second.
-      addRoute(parsed.conceptual_question, fallbacks[topic][0]);
-      addRoute(parsed.practical_question, fallbacks[topic][1]);
+      addRoute(parsed.conceptual_question, routes[0]);
+      addRoute(parsed.practical_question, routes[1]);
     }
 
     // A precise source-backed term can be offered as an optional third question.
