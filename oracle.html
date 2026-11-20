@@ -16,6 +16,7 @@ const history = []; // Temporary memory: only in this page's JavaScript memory.
 let conversationDomain = null;  // Preserve economic/recovery/etc. intent across 6-exchange truncation.
 let modelDiscovered = false;  // Preserve explicit discovery while following either navigation route.
 let engagementShown = false; // Show exploratory cooperation invite at most once per dialogue.
+const offeredIssueKeys = new Set(); // Do not repeat a reconciliation invitation for the same source pair.
 
 // Safe subset of Markdown. No innerHTML or third-party scripts.
 function appendInline(target, line) {
@@ -85,7 +86,7 @@ function displaySourceName(name) {
   return original;
 }
 
-function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища", originalQuestion = "", engagementMode = "none") {
+function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища", originalQuestion = "", engagementMode = "none", sourceIssue = null) {
   sources = [...new Set(sources.map(displaySourceName))];
   const placeholder = thread.querySelector(".empty");
   if (placeholder) placeholder.remove();
@@ -196,24 +197,36 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     const offer = document.createElement("div");
     offer.className = "engagement-offer";
     const link = document.createElement("a");
-    const isDemo = engagementFocus === "demo";
+    const isSourceIssue = engagementMode === "source_issue" &&
+      sourceIssue && Array.isArray(sourceIssue.refs) &&
+      typeof sourceIssue.subject === "string";
+    const issueContext = isSourceIssue
+      ? sourceIssue.refs.slice(0, 4).join(", ") + ": " + sourceIssue.subject.slice(0, 160) : "";
+    const isDemo = engagementFocus === "demo" && !isSourceIssue;
     link.href = "./?topic=" + encodeURIComponent(engagementTopic) +
       "&intent=" + encodeURIComponent(isDemo
         ? "Ініціатива розроблення" : "Професійна дискусія") +
-      (isDemo ? "&focus=demo" : "") + "#cooperation";
+      (isDemo ? "&focus=demo" : "") +
+      (isSourceIssue ? "&issue=" + encodeURIComponent(issueContext) : "") +
+      "#cooperation";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.textContent = isDemo
-      ? "Долучитися до розроблення Демонстраційної моделі"
-      : engagementMode === "exploration"
-        ? "Долучитися до обговорення або перевірки Моделі"
-        : "Підготувати пропозицію співпраці або критичного розгляду";
+    link.textContent = isSourceIssue
+      ? "Долучитися до усунення неузгодженості"
+      : isDemo
+        ? "Долучитися до розроблення Демонстраційної моделі"
+        : engagementMode === "exploration"
+          ? "Долучитися до обговорення або перевірки Моделі"
+          : "Підготувати пропозицію співпраці або критичного розгляду";
     const explanation = document.createElement("p");
-    explanation.textContent = isDemo
-      ? "Мета — спільно створити дані для оцінювання інвестиційних сценаріїв, а не інвестувати у готовий проєкт. Форма готує звернення для копіювання і не надсилає його."
-      : engagementMode === "exploration"
-        ? "За бажанням можна запропонувати автору дискусію, критичний розгляд або фаховий внесок. Форма лише готує текст для копіювання й не надсилає його."
-        : "Відкриється форма підготовки звернення. Вона копіює текст, але не надсилає його.";
+    explanation.textContent = isSourceIssue
+      ? "Потрібна незалежна звірка положень " + sourceIssue.refs.join(" і ") +
+        ". Можна запропонувати аргументи або редакцію для розгляду автором. Форма готує текст для копіювання і не надсилає його."
+      : isDemo
+        ? "Мета — спільно створити дані для оцінювання інвестиційних сценаріїв, а не інвестувати у готовий проєкт. Форма готує звернення для копіювання і не надсилає його."
+        : engagementMode === "exploration"
+          ? "За бажанням можна запропонувати автору дискусію, критичний розгляд або фаховий внесок. Форма лише готує текст для копіювання й не надсилає його."
+          : "Відкриється форма підготовки звернення. Вона копіює текст, але не надсилає його.";
     offer.append(link, explanation);
     card.append(offer);
   }
@@ -241,6 +254,7 @@ async function askOracle(q, route = null) {
         conversation_domain: conversationDomain,
         model_discovered: modelDiscovered,
         engagement_shown: engagementShown,
+        source_issue_keys: [...offeredIssueKeys].slice(-40),
         contextual_followup: route === null && history.length > 0
       }),
       cache: "no-store",
@@ -268,7 +282,8 @@ async function askOracle(q, route = null) {
       typeof data.engagement_focus === "string" ? data.engagement_focus : "none",
       typeof data.engagement_topic === "string" ? data.engagement_topic : "Модель середовища",
       q,
-      typeof data.engagement_mode === "string" ? data.engagement_mode : "none");
+      typeof data.engagement_mode === "string" ? data.engagement_mode : "none",
+      data.source_issue && typeof data.source_issue === "object" ? data.source_issue : null);
     // Keep reading position at the START of the new answer,
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
@@ -276,6 +291,9 @@ async function askOracle(q, route = null) {
       conversationDomain = data.conversation_domain;
     modelDiscovered = data.model_discovered === true;
     engagementShown = engagementShown || data.engagement_offer === true;
+    if (data.engagement_mode === "source_issue" &&
+        typeof data.source_issue_key === "string" && data.source_issue_key)
+      offeredIssueKeys.add(data.source_issue_key);
     history.push(
       { role: "user", content: q, route: route === "conceptual" || route === "practical" ? route : null },
       { role: "assistant", content: data.answer,
@@ -284,7 +302,9 @@ async function askOracle(q, route = null) {
         offered_questions: Array.isArray(data.suggestions)
           ? data.suggestions.filter(item => item && typeof item.query === "string")
               .slice(0, 3).map(item => item.query) : [],
-        engagement_offered: data.engagement_offer === true }
+        engagement_offered: data.engagement_offer === true,
+        source_issue_key: typeof data.source_issue_key === "string" ?
+          data.source_issue_key : "" }
     );
     if (history.length > 12) history.splice(0, history.length - 12);
     if (route === null) question.value = "";
@@ -333,6 +353,7 @@ restart.addEventListener("click", () => {
   conversationDomain = null;
   modelDiscovered = false;
   engagementShown = false;
+  offeredIssueKeys.clear();
   thread.replaceChildren();
   const placeholder = document.createElement("p");
   placeholder.className = "empty";
