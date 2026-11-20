@@ -80,6 +80,27 @@ export default {
       /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*|принцип[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question) ||
       (/альтернатив[а-яіїєґ]*|інш[а-яіїєґ]*\s+принцип[а-яіїєґ]*/iu.test(question) &&
        /територ|міст|розселен|інфраструктур|організаці|плануван|виробнич[а-яіїєґ]*\s+систем/iu.test(question));
+    // Preserve the first meaningful subject of the conversation. A word like
+    // "energy" in a subsequent economic question must not change disciplines.
+    const inferDomain = txt => {
+      const input = String(txt || "").toLocaleLowerCase("uk");
+      if (/економ|підприємств|бізнес|попит|пропозиц|ринк|вартіст|виробнич[а-яіїєґ]*\s+ланцюг|дефіцит[а-яіїєґ]*\s+ресурс/.test(input)) return "economy";
+      if (/відбудов|зруйнован|архітектур|повоєнн|генплан/.test(input)) return "recovery";
+      if (/енерг|електр|генерац|накопич|потужн/.test(input)) return "energy";
+      if (/транспорт|логіст|перевез/.test(input)) return "transport";
+      if (/агро|зерн|врожай|сільськ/.test(input)) return "agriculture";
+      if (/територ|міст|простор|розселен/.test(input)) return "territory";
+      return "general";
+    };
+    const domainWhitelist = ["economy", "recovery", "energy", "transport", "agriculture", "territory", "general"];
+    const firstVisitorQuestion = userTurns.length ? userTurns[0].content : question;
+    const domain = domainWhitelist.includes(body.conversation_domain)
+      ? body.conversation_domain : inferDomain(firstVisitorQuestion);
+    const modelDiscovered = body.model_discovered === true ||
+      history.some(x => x.role === "assistant" &&
+        /модел[ьіюі]?\s+середовищ/iu.test(x.content));
+    const selectedModelFollowup = modelDiscovered && navigationRoute !== null &&
+      !/не\s+(?:згадуй|називай|обговорюй)\s+модел/iu.test(question);
     const systemTopic = /відбудов|зруйнован|архітектур|територ|розселен|міст|еколог|енерг|електр|транспорт|агро|виробництв|економ|інфраструктур/iu.test(userText);
     const selectionTrail = [...userTurns.map(x => x.route), navigationRoute];
     let conceptualRun = 0;
@@ -87,7 +108,7 @@ export default {
       conceptualRun++;
     // A conceptual click broadens the frame; only explicit interest in
     // structural alternatives unlocks Model retrieval.
-    const phase = namesModel ? "model" :
+    const phase = (namesModel || selectedModelFollowup) ? "model" :
       (seeksAlternative && systemTopic) ? "alternatives" :
       (conceptualRun >= 1 && systemTopic) ? "systems" : "open";
     const strategicExploration = phase === "open" || phase === "systems";
@@ -356,9 +377,44 @@ export default {
       "Для відбудови розрізняй архітектуру будівель та екологічну,",
       "енергетичну, виробничу, інфраструктурну, соціальну організацію."
     ].join(" ");
-    const instructions = phase === "model" ? modelInstructions :
+    const economicInstructions = [
+      "Предмет цього діалогу — економіка як система взаємодій, а не",
+      "територіальне планування. Не змінюй предмет лише через слова",
+      "«енергія», «ресурс» чи «територія» в прикладах.",
+      "Розрізняй локальну ефективність, економічні відносини й",
+      "структурну еволюцію попиту, пропозиції та їхніх взаємних впливів.",
+      "Кількісне зростання попиту відрізняється від появи якісно нових",
+      "потреб: нові потреби можуть викликати ускладнення пропозиції,",
+      "а нова пропозиція — породжувати нові потреби.",
+      "Розглядай дефіцити, економічну координацію, формування вартості,",
+      "облік виробничих взаємодій, умови відтворення та інтереси учасників.",
+      "Територіальні й екологічні обмеження можуть бути одним із чинників,",
+      "але не замінюють аналіз економічної системи.",
+      "Концептуальне питання повинно відкривати НОВІ економічні",
+      "принципи, а не зводитися до вибору ресурсних обмежень.",
+      "Практичне питання стосується попиту, виробничих спроможностей,",
+      "розподілу вигод та ризиків і механізмів економічного обліку."
+    ].join(" ");
+    const economicModelInstructions = [
+      "Якщо матеріали підтверджують наявність відповідних понять,",
+      "розкрий економічний зміст Моделі середовища: фрактальну",
+      "економіку, якісно нові потреби, гарантовані майбутні потреби,",
+      "систему прямого економічного обліку, ланцюги вартості,",
+      "дефіцити та механізми узгодження попиту і виробничих можливостей.",
+      "Не зводь фрактальну економіку до близькості підприємств на",
+      "території чи до географічного розміщення інфраструктури.",
+      "Якщо конкретний механізм не підтвердився пошуком, не вигадуй",
+      "його визначення або наслідків. Не заявляй доведеної переваги.",
+      "Після відповіді пропонуй концептуальне питання про економічні",
+      "відносини та практичне — про можливість їх критичної перевірки."
+    ].join(" ");
+    const stageInstructions = phase === "model" ? modelInstructions :
       phase === "alternatives" ? alternativeInstructions :
       phase === "systems" ? systemsInstructions : strategicInstructions;
+    const instructions = domain === "economy"
+      ? stageInstructions + " " + economicInstructions +
+        (phase === "model" || phase === "alternatives" ? " " + economicModelInstructions : "")
+      : stageInstructions;
 
     let response;
     try {
@@ -495,14 +551,14 @@ export default {
       suggestions.push({ kind: "question", route, label: q, query: q });
       return true;
     };
-    const topicText = userText.toLocaleLowerCase("uk");
-    const topic = /відбудов|зруйнован|архітектур|повоєнн/.test(topicText) ? "recovery" :
-      /енерг|електр|генерац|накопич|потужн/.test(topicText) ? "energy"
-      : /транспорт|логіст|перевез/.test(topicText) ? "transport"
-      : /агро|зерн|врожай|сільськ/.test(topicText) ? "agriculture"
-      : /територ|міст|простор|розселен/.test(topicText) ? "territory"
-      : /економ|бізнес|ринк|інвест/.test(topicText) ? "economy" : "general";
+    const topic = domain;
     const fallbacks = {
+      economy: [
+        ["Як взаємне ускладнення потреб і виробничих можливостей змінює структуру економічної системи?",
+         "Чому якісно нові потреби можуть змінювати самі економічні відносини?"],
+        ["Які нові потреби та виробничі можливості можуть виникнути в економічних ланцюгах?",
+         "Як економічні дефіцити та взаємозалежності змінюють рішення підприємств?"]
+      ],
       recovery: [
         ["Як зміниться логіка відбудови, якщо спочатку дослідити екологічні та ресурсні можливості території?",
          "Чи мають природні умови та ресурсні обмеження впливати на майбутню структуру розселення ще до проєктування будівель?"],
@@ -573,7 +629,15 @@ export default {
     // A conceptual route must gain altitude. An initial building-level
     // discussion becomes a system-level question; the next opt-in choice
     // explicitly opens structural alternatives without naming the Model yet.
-    const conceptualNext = phase === "open" && topic === "recovery"
+    const conceptualNext = phase === "open" && topic === "economy"
+      ? "Як якісно нові потреби та виробничі можливості взаємно змінюють структуру економічної системи?"
+      : phase === "systems" && topic === "economy"
+      ? "Які альтернативні принципи економічної організації можуть узгоджувати потреби, виробництво та облік вартості?"
+      : phase === "alternatives" && topic === "economy"
+      ? "Чим економічні механізми Моделі середовища відрізняються від оптимізації наявних ринкових відносин?"
+      : phase === "model" && topic === "economy"
+      ? "Як фрактальна економіка пов'язує появу нових потреб, ускладнення виробництва та взаємні впливи?"
+      : phase === "open" && topic === "recovery"
       ? "Як зміниться логіка відбудови, якщо спочатку дослідити екологічні та ресурсні можливості території?"
       : phase === "systems" && topic === "recovery"
       ? "Які альтернативні принципи організації територій випливають з екологічних, енергетичних та ресурсних умов?"
@@ -588,7 +652,13 @@ export default {
       : phase === "model" && topic === "recovery"
       ? "Як у Моделі середовища екологічні умови визначають енергетику, інфраструктуру й розселення?"
       : null;
-    const practicalNext = phase === "open" && topic === "recovery"
+    const practicalNext = phase === "open" && topic === "economy"
+      ? "Як взаємні зміни попиту й пропозиції вплинуть на виробничі ланцюги та можливості підприємств?"
+      : phase === "systems" && topic === "economy"
+      ? "За якими економічними показниками порівняти різні механізми узгодження потреб і виробництва?"
+      : phase === "alternatives" && topic === "economy"
+      ? "Які механізми прямого економічного обліку варто перевірити на виробничому ланцюгу?"
+      : phase === "open" && topic === "recovery"
       ? "Як різні принципи розселення змінять потреби громад в енергії, інфраструктурі, ресурсах і безпеці?"
       : phase === "systems" && topic === "recovery"
       ? "Які наслідки для транспорту, енергетики та життєзабезпечення матиме інша організація територій?"
@@ -601,7 +671,25 @@ export default {
     // the initial fallback questions. History contains at most six user turns,
     // so these additional distinct choices prevent the two-route UI from
     // collapsing into a single chip as the practical branch deepens.
-    const extendedRoutes = topic === "recovery" ? {
+    const extendedRoutes = topic === "economy" ? {
+      conceptual: [
+        "Чому нові потреби змінюють не лише обсяг, а й структуру економічних зв'язків?",
+        "Як нові виробничі спроможності породжують потреби, яких раніше не існувало?",
+        "Які відмінності між економікою капіталу та фрактальною економікою підлягають перевірці?",
+        "Як може змінитися логіка формування вартості в складних виробничих ланцюгах?",
+        "Що є первинним для економічної координації: попит, пропозиція чи їхній взаємний вплив?"
+      ],
+      practical: [
+        "Як виміряти появу якісно нових потреб у різних виробничих ланцюгах?",
+        "Як підприємства можуть виявляти дефіцити, що породжують нові економічні взаємодії?",
+        "Які дані потрібні для зіставлення звичайного та прямого економічного обліку?",
+        "Як зміниться роль підприємств у складніших виробничих взаємодіях?",
+        "Як перевірити вплив нових правил економічної координації на доступність продукції?",
+        "Які ризики створює зміна механізмів обліку та узгодження виробничих потреб?",
+        "Як зіставити витрати координації та втрати від дефіцитів за різних механізмів?",
+        "Які економічні наслідки матиме структурне ускладнення попиту й пропозиції?"
+      ]
+    } : topic === "recovery" ? {
       conceptual: [
         "Як змінюється система розселення, якщо природні умови задають її вихідні межі?",
         "Чи можуть екологічні та енергетичні зв'язки визначати розселення, а не лише обслуговувати його?",
@@ -669,6 +757,8 @@ export default {
       answer: answer ||
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше.",
       sources: introducedModel ? sources : [],
+      conversation_domain: domain,
+      model_discovered: introducedModel || modelDiscovered,
       suggestions,
       engagement_offer: introducedModel && Boolean(parsed?.engagement_offer),
       engagement_focus: introducedModel && parsed?.engagement_offer &&
