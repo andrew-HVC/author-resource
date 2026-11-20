@@ -81,7 +81,7 @@ export default {
     // named concepts are requests about the author's Model even when the
     // visitor does not literally type "Модель середовища".
     const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText) ||
-      /\b(?:МС|АТ)[-–—]\s*\d{3}\b|фрактальн[а-яіїєґ]*\s+економік/iu.test(question);
+      /(?:МС|АТ)[-–—]\s*\d{3}\b|фрактальн[а-яіїєґ]*\s+економік/iu.test(question);
     // "Alternative business models" is NOT a request for the author's Model.
     const seeksAlternative =
       /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*|принцип[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question) ||
