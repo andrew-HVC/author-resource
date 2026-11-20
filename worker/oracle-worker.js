@@ -60,32 +60,37 @@ export default {
     if (!question || question.length > 4000)
       return json({ error: "Question must contain 1–4000 characters" }, 400);
 
-    // Only the latest six exchanges are passed back to the API.
-    // The server does not keep transcripts, cookies or session IDs.
+    // Stateless progression follows chosen conceptual navigation, not turn count.
     const rawHistory = Array.isArray(body.history) ? body.history.slice(-12) : [];
-    const history = rawHistory
-      .filter(item => item &&
-        (item.role === "user" || item.role === "assistant") &&
-        typeof item.content === "string" &&
-        item.content.trim().length > 0)
-      .map(item => ({
-        role: item.role,
-        content: item.content.trim().slice(0, 2500)
+    const history = rawHistory.filter(x => x &&
+      (x.role === "user" || x.role === "assistant") &&
+      typeof x.content === "string" && x.content.trim()).map(x => ({
+        role: x.role,
+        content: x.content.trim().slice(0, 2500),
+        route: x.role === "user" && ["conceptual", "practical"].includes(x.route)
+          ? x.route : null
       }));
-
-    // Open exploration is the default: strategic intent is semantic, not a
-    // mandatory keyword match ("what will my company be in 20 years?" counts).
-    // Assistant-generated mentions must never unlock the author's Model.
-    const visitorText = [
-      ...history.slice(-6).filter(item => item.role === "user").map(item => item.content),
-      question
-    ].join(" ");
-    const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(visitorText);
+    const navigationRoute = ["conceptual", "practical"].includes(body.navigation_route)
+      ? body.navigation_route : null;
+    const userTurns = history.filter(x => x.role === "user");
+    const userText = [...userTurns.slice(-6).map(x => x.content), question].join(" ");
+    const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText);
     // "Alternative business models" is NOT a request for the author's Model.
-    // Unlock the source-backed route for a structural or system-level alternative.
-    // Use Ukrainian letter classes: JavaScript \w does not match Cyrillic suffixes.
-    const seeksAlternative = /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question);
-    const strategicExploration = !namesModel && !seeksAlternative;
+    const seeksAlternative =
+      /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*|принцип[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question) ||
+      (/альтернатив[а-яіїєґ]*|інш[а-яіїєґ]*\s+принцип[а-яіїєґ]*/iu.test(question) &&
+       /територ|міст|розселен|інфраструктур|організаці|плануван|виробнич[а-яіїєґ]*\s+систем/iu.test(question));
+    const systemTopic = /відбудов|зруйнован|архітектур|територ|розселен|міст|еколог|енерг|електр|транспорт|агро|виробництв|економ|інфраструктур/iu.test(userText);
+    const selectionTrail = [...userTurns.map(x => x.route), navigationRoute];
+    let conceptualRun = 0;
+    for (let i = selectionTrail.length - 1; i >= 0 && selectionTrail[i] === "conceptual"; i--)
+      conceptualRun++;
+    // A conceptual click broadens the frame; only explicit interest in
+    // structural alternatives unlocks Model retrieval.
+    const phase = namesModel ? "model" :
+      (seeksAlternative && systemTopic) ? "alternatives" :
+      (conceptualRun >= 1 && systemTopic) ? "systems" : "open";
+    const strategicExploration = phase === "open" || phase === "systems";
 
     const modelInstructions = [
       "Ти — Оракул простору альтернативних ідей.",
@@ -274,6 +279,11 @@ export default {
       "Початковий або загальний запит не означає інтересу до Моделі середовища.",
       "Для стратегічного запиту визнач проблему, часовий горизонт,",
       "рушії змін, два-три сценарії, нові можливості та їхні обмеження.",
+      "Якщо відвідувач вставив чужий допис без запитання, виділи",
+      "головну проблему, обмеження постановки й два шляхи дослідження;",
+      "не обмежуйся переказом анонсу.",
+      "Для відбудови розрізняй зміну архітектури і зміну організації",
+      "територій, не прирівнюй конкурс до цілісної стратегії.",
       "Для вузького технічного запиту дай точну відповідь без штучного",
       "переведення до стратегії або авторської Моделі.",
       "У стратегічних темах поступово відкривай зв'язки виробництва,",
@@ -303,7 +313,29 @@ export default {
       "Зберігай відкритість до інших поглядів; не приписуй мотивів користувачу."
     ].join(" ");
 
-    const instructions = strategicExploration ? strategicInstructions : modelInstructions;
+    const systemsInstructions = strategicInstructions + " " + [
+      "Відвідувач сам обрав концептуальне поглиблення.",
+      "Не обмежуйся архітектурою будівель, кварталами, участю громади",
+      "або локальними критеріями проєктування.",
+      "Розглянь організацію території чи системи як цілого: екологічні",
+      "обмеження, енергетику, виробництво, інфраструктуру, потреби людей.",
+      "Для відбудови розрізняй нові будівлі і вибір самої системи розселення.",
+      "Запропонуй запитання про альтернативні принципи системної організації.",
+      "Не називай авторську Модель, поки відвідувач не обере альтернативи."
+    ].join(" ");
+    const alternativeInstructions = modelInstructions + " " + [
+      "Відвідувач обрав дослідження системних альтернатив.",
+      "Порівняй відновлення попередньої структури з іншими принципами.",
+      "Якщо матеріали підтверджують відповідність, представ Модель",
+      "середовища як одну авторську альтернативу: її взаємозв'язки,",
+      "межі, неперевірені твердження і способи критичної перевірки.",
+      "Не перетворюй відповідь на рекламу чи запрошення до участі.",
+      "Для відбудови розрізняй архітектуру будівель та екологічну,",
+      "енергетичну, виробничу, інфраструктурну, соціальну організацію."
+    ].join(" ");
+    const instructions = phase === "model" ? modelInstructions :
+      phase === "alternatives" ? alternativeInstructions :
+      phase === "systems" ? systemsInstructions : strategicInstructions;
 
     let response;
     try {
@@ -316,7 +348,8 @@ export default {
         body: JSON.stringify({
           model: "gpt-6-luna",
           instructions,
-          input: [...history, { role: "user", content: question }],
+          input: [...history.map(x => ({ role: x.role, content: x.content })),
+            { role: "user", content: question }],
           ...(strategicExploration ? {} : {
             tools: [{
               type: "file_search",
