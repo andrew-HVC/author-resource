@@ -90,7 +90,8 @@ export default {
       /(?:МС|АТ)[-–—]\s*\d{3}\b|фрактальн[а-яіїєґ]*\s+економік/iu.test(question) ||
       shorthandModel;
     const namesModel = directModelInquiry ||
-      /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText);
+      (body.model_discovered === true &&
+       /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText));
     // "Alternative business models" is NOT a request for the author's Model.
     const seeksAlternative =
       /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*|принцип[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question) ||
@@ -120,9 +121,13 @@ export default {
     const firstVisitorQuestion = userTurns.length ? userTurns[0].content : question;
     let domain = domainWhitelist.includes(body.conversation_domain)
       ? body.conversation_domain : inferDomain(firstVisitorQuestion);
-    const modelDiscovered = body.model_discovered === true ||
-      history.some(x => x.role === "assistant" &&
-        /модел[ьіюі]?\s+середовищ/iu.test(x.content));
+    // A boolean from the current page takes precedence: an explicitly
+    // changed topic must not be reclassified by older Model replies still
+    // present in the last-six-turn history.
+    const modelDiscovered = typeof body.model_discovered === "boolean"
+      ? body.model_discovered
+      : history.some(x => x.role === "assistant" &&
+          /модел[ьіюі]?\s+середовищ/iu.test(x.content));
     // A visitor can write their own contextual follow-up instead of picking
     // a navigation chip. Keep the established Model context across both paths.
     // Only an explicit switch of topic should leave that context.
