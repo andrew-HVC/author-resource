@@ -271,6 +271,19 @@ export default {
       "Не вигадуй епістем чи неіснуючих документів; не пропонуй",
       "термінів, наявність яких у матеріалах Моделі середовища не підтверджено.",
       "Плашки — лише навігація до наступної відповіді, а не окрема відповідь.",
+      "У полі answer НЕ пиши жодного навігаційного запитання наприкінці.",
+      "Ніколи не вставляй в answer підписи «Концептуальне питання»",
+      "чи «Практичне питання» або їхні формулювання. Для цього існують",
+      "лише окремі поля conceptual_question та practical_question.",
+      "У навігаційних питаннях називай специфічний авторський термін",
+      "тільки після того, як термін уже було введено або пояснено в",
+      "тексті поточної чи попередньої відповіді, або його назвав сам користувач.",
+      "related_term має бути ТОЧНОЮ канонічною назвою картки Атласу",
+      "термінів, а не довільним синонімом, описовим словосполученням",
+      "або неформальним поняттям із тексту епістем.",
+      "Не видавай терміни «економічна атрибуція», «структурна пам’ять»",
+      "або «простежуване походження економічного результату»",
+      "за назви карток Атласу без явної перевірки канонічного заголовка.",
       "Воронка має показувати сенс співпраці: не лише кнопку звернення,",
       "а й конкретні відкриті питання та види компетенцій, які можуть",
       "допомогти перевірити Модель. Не вигадуй наявних вакансій чи фінансування.",
@@ -410,7 +423,12 @@ export default {
       "Якщо конкретний механізм не підтвердився пошуком, не вигадуй",
       "його визначення або наслідків. Не заявляй доведеної переваги.",
       "Після відповіді пропонуй концептуальне питання про економічні",
-      "відносини та практичне — про можливість їх критичної перевірки."
+      "відносини та практичне — про можливість їх критичної перевірки.",
+      "Фрактальна економіка — канонічна картка АТ-162, а прямий",
+      "економічний облік — АТ-183. Якщо хочеш запропонувати запитання",
+      "з такою назвою, коротко введи її в основній відповіді.",
+      "Не переходь до узагальнених питань про всю Модель після",
+      "вузької економічної теми: поглиблюй саме економічні зв'язки."
     ].join(" ");
     const stageInstructions = phase === "model" ? modelInstructions :
       phase === "alternatives" ? alternativeInstructions :
@@ -528,12 +546,24 @@ export default {
       }
     }
 
-    const answer = (parsed?.answer ||
+    const rawAnswer = (parsed?.answer ||
       (raw.startsWith("{") ? "" : raw))
       .replace(/\uE200filecite\uE202[\s\S]*?\uE201/g, "")
       // A removed citation must not leave "текст ." or "текст ," behind.
       .replace(/[ \t]+([.,;:!?])/g, "$1")
       .trim();
+    // OpenAI sometimes puts suggested questions into the prose answer even
+    // though JSON already has two navigation fields. Keep those in chips only.
+    const answerLines = rawAnswer.split(/\n\s*\n/);
+    const isNavigationParagraph = paragraph => {
+      const p = paragraph.trim();
+      return /^(?:Концептуальне|Практичне|Пов'язане|Пов’язане)\s+питання\s*[:：]/iu.test(p) ||
+        /^(?:Які|Який|Яка|Яке|Як|Чому|Чи|Що|Хто|Коли|Де|Для чого|Яким|Якою|У чому|За якими)\b/iu.test(p) &&
+          p.length <= 220 && /\?\s*$/.test(p);
+    };
+    while (answerLines.length > 1 && isNavigationParagraph(answerLines[answerLines.length - 1]))
+      answerLines.pop();
+    const answer = answerLines.join("\n\n").trim();
 
     // During broad strategic exploration, do not reveal the Model indirectly
     // through source labels, jargon chips, or a premature participation CTA.
@@ -640,7 +670,11 @@ export default {
       : phase === "alternatives" && topic === "economy"
       ? "Чим економічні механізми Моделі середовища відрізняються від оптимізації наявних ринкових відносин?"
       : phase === "model" && topic === "economy"
-      ? "Як фрактальна економіка пов'язує появу нових потреб, ускладнення виробництва та взаємні впливи?"
+      ? (/фрактальн[а-яіїєґ]*\s+економік/iu.test(question)
+          ? "Як економічне ускладнення нових потреб і продуктивних спроможностей впливає на формування вартості?"
+          : /фрактальн[а-яіїєґ]*\s+економік/iu.test(answer + " " + userText)
+            ? "Як фрактальна економіка пов'язує появу нових потреб, ускладнення виробництва та взаємні впливи?"
+            : "Якими механізмами можна відображати взаємне ускладнення потреб, виробництва й економічних зв'язків?")
       : phase === "open" && topic === "recovery"
       ? "Як зміниться логіка відбудови, якщо спочатку дослідити екологічні та ресурсні можливості території?"
       : phase === "systems" && topic === "recovery"
@@ -750,7 +784,26 @@ export default {
     const term = typeof parsed?.related_term === "string"
       ? parsed.related_term.trim().replace(/\s+/g, " ")
       : "";
-    if (introducedModel && term && term.length <= 60 && suggestions.length === 2) {
+    // A citation to an episteme does not establish that an arbitrary phrase
+    // is a canonical Atlas headword. Until both clean Atlas volumes are
+    // indexed, only explicitly verified headwords may become terminology chips.
+    const verifiedAtlasTerms = new Set([
+      "модель середовища", "екологічний каркас",
+      "лінійний інфраструктурний каркас", "несуча здатність території",
+      "кластер", "синтетична екосистема", "фрактальна економіка",
+      "прямий економічний облік", "гарантовані майбутні потреби",
+      "ланцюг вартості", "виробничий ланцюг",
+      "економічна операція", "економічний результат",
+      "походження економічного результату"
+    ]);
+    const normalizeAtlasTerm = str => str.toLocaleLowerCase("uk")
+      .replace(/^[«"']|[»"']$/g, "").replace(/\s+/g, " ").trim();
+    const canonicalTerm = normalizeAtlasTerm(term);
+    const alreadyIntroduced = (answer + " " + userText)
+      .toLocaleLowerCase("uk").includes(canonicalTerm);
+    if (introducedModel && term && term.length <= 60 &&
+        verifiedAtlasTerms.has(canonicalTerm) && alreadyIntroduced &&
+        suggestions.length === 2) {
       const query = "Що означає термін «" + term + "» у Моделі середовища?";
       const key = query.toLocaleLowerCase("uk");
       if (!seen.has(key))
