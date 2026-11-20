@@ -83,7 +83,7 @@ function displaySourceName(name) {
   return original;
 }
 
-function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища") {
+function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища", originalQuestion = "") {
   sources = [...new Set(sources.map(displaySourceName))];
   const placeholder = thread.querySelector(".empty");
   if (placeholder) placeholder.remove();
@@ -104,9 +104,16 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     copy.type = "button";
     copy.className = "copy-answer";
     copy.textContent = "⧉ Копіювати";
-    copy.setAttribute("aria-label", "Копіювати відповідь Оракула у буфер обміну");
+    copy.setAttribute("aria-label", "Копіювати запитання та відповідь Оракула у буфер обміну");
     copy.addEventListener("click", async () => {
-      const text = body.innerText.trim() +
+      // Copy a self-contained question/answer pair, not just the reply and
+      // not unrelated earlier turns or the next-navigation suggestions.
+      const text = [
+        "Ви",
+        String(originalQuestion || "").trim(),
+        "Оракул",
+        body.innerText.trim()
+      ].filter(Boolean).join("\n\n") +
         (sources.length ? "\n\nДжерела: " + sources.join("; ") : "");
       try {
         await copyAnswer(text);
@@ -244,7 +251,8 @@ async function askOracle(q, route = null) {
       Array.isArray(data.suggestions) ? data.suggestions : [],
       data.engagement_offer === true,
       typeof data.engagement_focus === "string" ? data.engagement_focus : "none",
-      typeof data.engagement_topic === "string" ? data.engagement_topic : "Модель середовища");
+      typeof data.engagement_topic === "string" ? data.engagement_topic : "Модель середовища",
+      q);
     // Keep reading position at the START of the new answer,
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
