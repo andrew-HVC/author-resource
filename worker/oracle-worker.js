@@ -272,6 +272,7 @@ export default {
           ? x.offered_questions.filter(q => typeof q === "string")
               .slice(0, 3).map(q => q.trim().slice(0, 150)) : [],
         engagement_offered: x.role === "assistant" && x.engagement_offered === true,
+        demo_engagement_offered: x.role === "assistant" && x.demo_engagement_offered === true,
         source_issue_key: x.role === "assistant" && typeof x.source_issue_key === "string"
           ? x.source_issue_key.slice(0, 120) : ""
       }));
@@ -343,6 +344,12 @@ export default {
       /(?:хто|ким).{0,90}(?:встанов|визнач|затвердж|ухвал).{0,90}(?:правил|норм)|(?:керуюч[а-яіїєґ]*\s+норм|правил[а-яіїєґ]*\s+житт|рішенн[а-яіїєґ]*\s+громад|цифров[а-яіїєґ]*\s+(?:копі|систем).{0,65}(?:правил|норм|рішенн))/iu.test(question);
     const asksFunctionalCommunities =
       /функціональн[а-яіїєґ]*\s+спільнот/iu.test(question);
+    // Only a developed conversation about the author's spatial organization
+    // can trigger the demo-stage invitation on a question about benefits.
+    const hasSpatialModelContext =
+      /кластер|розселен|несуч[а-яіїєґ]*\s+здатн|просторов|містобуд|екокаркас|екологічн[а-яіїєґ]*\s+каркас|інфраструктурн[а-яіїєґ]*\s+каркас/iu.test(userText);
+    const asksSpatialBenefits =
+      /переваг|вигод|що\s+(?:це|такий\s+підхід|ця\s+модел)\s+дає|стійкіст|стійкост|ефективн|надійн|які\s+наслідк|як\s+(?:це|такий\s+підхід)\s+вплива|порівнян[яі]\s+(?:альтернатив|сценарі)/iu.test(question);
     const asksSocioPoliticalClassification =
       /капіталізм|капіталістичн|соціалізм|соціалістичн|постполітичн|формаці[яії]|суспільн[а-яіїєґ]*\s+(?:лад|устрій|систем|відносин)|соціальн[а-яіїєґ]*\s+(?:відносин|стосунк|систем)|соціально[-–]?економічн[а-яіїєґ]*\s+(?:систем|відносин)|як\s+(?:це|її|таку\s+систему)\s+назват/iu.test(question);
     const asksCoercionRisk =
@@ -575,7 +582,7 @@ export default {
       "Воронка має показувати сенс співпраці: не лише кнопку звернення,",
       "а й конкретні відкриті питання та види компетенцій, які можуть",
       "допомогти перевірити Модель. Не вигадуй наявних вакансій чи фінансування.",
-      "Існують ТРИ приводи для пропозиції взаємодії:",
+      "Існують ЧОТИРИ приводи для пропозиції взаємодії:",
       "(1) Прямий намір: відвідувач хоче контакту, пропонує співпрацю,",
       "експертизу, дані чи участь. Можливий вже з першого звернення.",
       "(2) Стійке предметне зацікавлення: відвідувач добровільно",
@@ -586,6 +593,12 @@ export default {
       "навіть у першій відповіді опиши розбіжні положення, поясни",
       "наслідок для інтерпретації та попроси добровільно долучитися",
       "до перевірки і погодження редакції з автором.",
+      "(4) Після кількох змістовних запитань про просторові рішення",
+      "Моделі, їх переваги, несучу здатність чи стійкість:",
+      "покажи наступну стадію — ПІДГОТОВКУ ТА СТВОРЕННЯ",
+      "Демонстраційної моделі середовища — і за бажанням",
+      "запроси долучитися до цієї конкретної розробки.",
+      "Не спрямовуй відразу до натурного пілоту або будівництва.",
       "Не називай просто різну деталізацію логічною суперечністю.",
       "Окремо познач різну сферу застосування, відмінні критерії",
       "і пряму несумісність тверджень. Сам Оракул НЕ змінює канон.",
@@ -602,6 +615,13 @@ export default {
       "engagement_offer=true. Професія, інвестиційний інтерес чи сам",
       "запит про майбутнє галузі НЕ є підставою для такого запрошення.",
       "Це правило діє також для керівників енергетичних компаній.",
+      "У вже розгорнутій розмові про територіальну архітектуру",
+      "достатнім приводом для одноразового ДЕМО-запрошення",
+      "є предметні питання про очікувані переваги чи стійкість",
+      "після кількох добровільних переходів. Це НЕ згода.",
+      "Спершу передпроєктна підготовка й професійна перевірка",
+      "вихідних даних, далі інтегрована цифрова Демонстраційна",
+      "модель, тільки потім можливий реальний пілот (МС-001, МС-053).",
       "Для іншого підтвердженого інтересу поверни engagement_focus=general;",
       "якщо пропозиція ще передчасна, engagement_focus=none та",
       "engagement_offer=false. Пропозиція ніколи не означає домовленість.",
@@ -1064,6 +1084,30 @@ export default {
       "Навігація має виходити з роз'яснених принципів,",
       "а не вводити без попереднього контексту нове «право виходу»."
     ].join(" ");
+    const spatialDemoStageInstructions = [
+      "Користувач поглиблено розглядає можливі переваги,",
+      "стійкість або результати просторової організації",
+      "Моделі середовища. Дай відповідь по суті й назви",
+      "зрозумілі очікувані ефекти без заяв про доведеність.",
+      "Поясни СТАДІЙНІСТЬ згідно з «Передмовою. Про характер",
+      "демонстраційного проєкту» й «Екосистемою розвитку Моделі»:",
+      "нині — авторські передпроєктні пропозиції; наступна",
+      "підготовка з фахівцями, даними й розрахунками;",
+      "Демонстраційна модель — ЦИФРОВА інтегрована система",
+      "для параметризації, сценаріїв, оцінювання альтернатив,",
+      "прогнозування та виявлення суперечностей;",
+      "натурний пілот — ОКРЕМА подальша стадія.",
+      "Не закінчуй відповідь безальтернативною тезою",
+      "«оцінити можливо лише на конкретній території",
+      "після реального проєкту». Проєктні переваги та",
+      "залежності спочатку можуть досліджуватися в",
+      "Демонстраційній моделі; натурні факти — з пілоту.",
+      "Покажи, що конкретні фахівці можуть дати на поточній",
+      "стадії: вихідні дані, розрахунки, проєктні рішення,",
+      "критичні висновки, цифрове моделювання.",
+      "Запрошення до розроблення Моделі має бути добровільним,",
+      "без припущення про згоду, фінансування чи наявні вакансії."
+    ].join(" ");
     const governanceInstructions = [
       "Відповідай на питання «хто встановлює правила?» у вже обговорюваній",
       "Моделі середовища, а не про абстрактні можливості різних систем.",
@@ -1106,7 +1150,9 @@ export default {
       (phase === "model" && asksSocioPoliticalClassification
         ? " " + socioPoliticalClassificationInstructions : "") +
       (phase === "model" && asksCoercionRisk
-        ? " " + coercionRiskInstructions : "");
+        ? " " + coercionRiskInstructions : "") +
+      (phase === "model" && hasSpatialModelContext && asksSpatialBenefits
+        ? " " + spatialDemoStageInstructions : "");
 
     let response;
     try {
@@ -1679,6 +1725,21 @@ export default {
     const sustainedModelInterest =
       !explicitlyDeclines && introducedModel && modelDiscovered &&
       phase === "model" && modelFollowupCount >= 2 && !previouslyOffered;
+    // A prior generic discussion invitation must not suppress the more
+    // relevant, one-time invitation to co-develop the Demonstration Model.
+    const wantsDemonstration =
+      introducedModel && /демонстраційн[а-яіїєґ]*\s+модел|демомодел/iu.test(question);
+    const demoPreviouslyInvited = body.demo_engagement_shown === true ||
+      history.some(x => x.demo_engagement_offered);
+    const invitesDemoFromSpatialInquiry = !explicitlyDeclines &&
+      introducedModel && modelDiscovered && phase === "model" &&
+      hasSpatialModelContext && asksSpatialBenefits &&
+      modelFollowupCount >= 2;
+    const directDemoInterest = !explicitlyDeclines && activeCollaborationIntent &&
+      wantsDemonstration;
+    const inviteToDevelopDemo =
+      (invitesDemoFromSpatialInquiry || directDemoInterest) &&
+      !demoPreviouslyInvited;
     // Issue-specific invitation is triggered by source-based evidence, not
     // the number of dialogue turns or the generic invitation history.
     const rawIssue = parsed?.source_issue;
@@ -1727,12 +1788,11 @@ export default {
     const inviteToResolveIssue = issueIsGrounded &&
       !alreadyInvitedOnIssue && !explicitlyDeclines;
     const showEngagement = activeCollaborationIntent || inviteToResolveIssue ||
-      sustainedModelInterest;
+      inviteToDevelopDemo || sustainedModelInterest;
     const engagementMode = inviteToResolveIssue ? "source_issue" :
+      inviteToDevelopDemo ? "demo" :
       activeCollaborationIntent ? "direct" :
       sustainedModelInterest ? "exploration" : "none";
-    const wantsDemonstration =
-      introducedModel && /демонстраційн[а-яіїєґ]*\s+модел|демомодел/iu.test(question);
     const engagementTopic = introducedModel ? "Модель середовища" : ({
       economy: "Економічна організація",
       recovery: "Відбудова територій",
@@ -1745,10 +1805,37 @@ export default {
     }[domain] || "Авторські концепції");
     // The source issue invitation is part of the answer, not only a link
     // beneath the navigation chips. Do not duplicate a model-written invite.
-    const responseAnswer = inviteToResolveIssue &&
+    const sourceIssueAnswer = inviteToResolveIssue &&
       !/запрош[а-яіїєґ]*\s+долучит|мож(?:ете|на)\s+долучит|долучит[ися]*\s+до\s+(?:звірк|узгоджен|перевірк)/iu.test(answer)
       ? answer + "\n\nЗапрошую за бажанням долучитися до звірки зазначених джерел і запропонувати автору аргументоване уточнення."
       : answer;
+    // The Demo invitation is explicitly part of the prose answer, not only
+    // an optional card after the questions. The card links to a draft form.
+    const demoStageBridge = [
+      "Наступний проєктний крок — підготовка і створення",
+      "**Демонстраційної моделі середовища**:",
+      "інтегрованої цифрової системи для перевірки",
+      "взаємозалежностей, сценарних розрахунків і порівняння",
+      "просторових альтернатив. Натурний пілот — окрема",
+      "подальша стадія; очікувані переваги ще не доведені."
+    ].join(" ");
+    const demoParticipation = [
+      "**Запрошую долучитися до підготовки та розроблення",
+      "Демонстраційної моделі середовища.**",
+      "Предметом участі можуть бути професійні дані,",
+      "просторові та інженерні розрахунки, проєктні рішення,",
+      "цифрове моделювання й критична міждисциплінарна перевірка."
+    ].join(" ");
+    const hasDemoStageExplained =
+      /демонстраційн[а-яіїєґ]*\s+модел/iu.test(sourceIssueAnswer) &&
+      /цифров|моделюван|сценар|розрахунк|передпроєкт/iu.test(sourceIssueAnswer);
+    const hasDemoParticipation =
+      /(?:запрош|мож(?:ете|на)\s+долучит|долучит[ися]*).{0,115}(?:розробленн|створенн|підготовк).{0,85}демонстраційн[а-яіїєґ]*\s+модел/iu.test(sourceIssueAnswer);
+    const responseAnswer = inviteToDevelopDemo
+      ? sourceIssueAnswer +
+        (hasDemoStageExplained ? "" : "\n\n" + demoStageBridge) +
+        (hasDemoParticipation ? "" : "\n\n" + demoParticipation)
+      : sourceIssueAnswer;
     return json({
       answer: publicReferenceText(responseAnswer ||
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше."),
@@ -1758,8 +1845,11 @@ export default {
       suggestions,
       engagement_offer: showEngagement,
       engagement_mode: engagementMode,
-      engagement_focus: showEngagement ? (wantsDemonstration && activeCollaborationIntent ? "demo" : "general") : "none",
+      engagement_focus: showEngagement
+        ? (inviteToDevelopDemo || (wantsDemonstration && activeCollaborationIntent) ? "demo" : "general")
+        : "none",
       engagement_topic: showEngagement ? engagementTopic : null,
+      demo_engagement_offered: inviteToDevelopDemo,
       source_issue: issueIsGrounded ? {
         status: issueStatus, subject: issueSubject,
         refs: issueRefs, significance: issueSignificance,
