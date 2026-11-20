@@ -140,12 +140,15 @@ export default {
       navigationRoute === null && userTurns.length > 0;
     const asksWhoGoverns =
       /(?:хто|ким).{0,90}(?:встанов|визнач|затвердж|ухвал).{0,90}(?:правил|норм)|(?:керуюч[а-яіїєґ]*\s+норм|правил[а-яіїєґ]*\s+житт|рішенн[а-яіїєґ]*\s+громад|цифров[а-яіїєґ]*\s+(?:копі|систем).{0,65}(?:правил|норм|рішенн))/iu.test(question);
+    const asksFunctionalCommunities =
+      /функціональн[а-яіїєґ]*\s+спільнот/iu.test(question);
     const changesTopic =
       /(?:^|[.!?]\s*)(?:а\s+)?(?:тепер\s+)?(?:інш[аеи]\s+тема|нов[ае]\s+тема|інш[ае]\s+питання|змінимо\s+тему|змінімо\s+тему|перейдемо\s+до\s+інш|не\s+про\s+(?:цю\s+)?модел)/iu.test(question) ||
       /^(?:а\s+)?тепер\s+(?:поговорімо|поговоримо)\s+про\s+інш/iu.test(question);
     const explicitNewTopic = contextualFreeform && changesTopic && !directModelInquiry;
     if (explicitNewTopic) domain = inferDomain(question);
-    else if ((directModelInquiry || modelDiscovered) && asksWhoGoverns)
+    else if ((directModelInquiry || modelDiscovered) &&
+        (asksWhoGoverns || asksFunctionalCommunities))
       domain = "social";
     const selectedModelFollowup = modelDiscovered &&
       (navigationRoute !== null || (contextualFreeform && !changesTopic)) &&
@@ -295,6 +298,15 @@ export default {
       "але наступними питаннями відкрий концептуальний і прикладний рівні.",
       "Не роби обидва питання про перевірку резервів, формул і вихідних даних.",
       "Не повторюй попередні питання і не змінюй їхній реальний зміст.",
+      "ПЕРЕД тим як сформувати дві навігаційні плашки, перевір:",
+      "чи відповідь завершено пояснює предмет запиту й чи містить",
+      "змістовний місток до запропонованих наступних тем.",
+      "Якщо вводиш нову сутність або механізм, на якому ґрунтується",
+      "наступне запитання, коротко поясни його роль та зв'язок",
+      "із основною темою в самій відповіді. Інакше зміни плашку.",
+      "Не підмінюй основну відповідь анонсом наступної теми:",
+      "плашки розвивають наявний зміст, а не випереджають його.",
+      "Не додавай непідтверджених деталей лише заради плашки.",
       "Відвідувач може продовжувати діалог власним запитанням, не з плашки.",
       "Якщо в такому запитанні є «це», «така організація», «а що з...»,",
       "пояснюй із контексту попередніх реплік без вимоги назвати",
@@ -531,7 +543,7 @@ export default {
       "попит, пропозицію та їхні взаємні впливи, а не через дефіцити."
     ].join(" ");
     const needsCanonicalSearch = directModelInquiry ||
-      (phase === "model" && asksWhoGoverns) ||
+      (phase === "model" && (asksWhoGoverns || asksFunctionalCommunities)) ||
       /атлас[а-яіїєґ]*\s+термін|(?:АТ|МС)[-–—]\s*\d{3}|\bтермін[ауиів]?\b|визначенн[яею]|епістем[а-яіїєґ]*/iu.test(question) ||
       asksThreeDimensions;
     const openSocialInstructions = [
@@ -567,6 +579,32 @@ export default {
       "Пропонуй наступні питання про соціальні принципи та їх",
       "перевірку; не зводь діалог до пересування між будівлями."
     ].join(" ");
+    const functionalCommunityInstructions = [
+      "Це пряме запитання про функціональні спільноти та їхній",
+      "вплив на керування соціумом у Моделі середовища.",
+      "Спирайся на МС-040, МС-066 та особливо МС-080 щодо",
+      "шляху від суспільного запиту до суспільного економічного об'єкта.",
+      "Спочатку поясни, що функціональні спільноти виникають із",
+      "фактичних професійних, культурних, наукових та інших взаємодій,",
+      "можуть охоплювати кілька кластерів і не встановлюють",
+      "обов'язкових норм спільного простору: це компетенція громади.",
+      "Потім обов'язково розкрий другий канал впливу:",
+      "спільноти формують потреби й запити, які за необхідності",
+      "додаткової спроможності можуть стати предметом проєктування",
+      "СУСПІЛЬНОГО ЕКОНОМІЧНОГО ОБ'ЄКТА.",
+      "Коротко покажи механізм: суспільна потреба → бажаний результат",
+      "→ проєкт та цифрова копія → перевірка у пісочниці",
+      "→ реалізація → верифікація фактичного суспільного результату.",
+      "Перевірка охоплює можливість створення, стійке функціонування",
+      "та здатність отримати заявлений результат (МС-080).",
+      "Не плутай суспільну доцільність запиту із системною",
+      "допустимістю об'єкта; не вигадуй процедуру голосування",
+      "за проєкти чи автоматичне погодження будь-якого запиту.",
+      "Лише після такого пояснення допускається плашка про",
+      "оцінювання запитів перед перетворенням на проєкти.",
+      "Поясни обидва канали соціального впливу, не видаючи",
+      "функціональні спільноти за орган територіального врядування."
+    ].join(" ");
     const governanceInstructions = [
       "Відповідай на питання «хто встановлює правила?» у вже обговорюваній",
       "Моделі середовища, а не про абстрактні можливості різних систем.",
@@ -593,7 +631,8 @@ export default {
         (asksThreeDimensions ? " " + economicTriadInstructions : "")
       : domain === "social" ? stageInstructions + " " +
         (strategicExploration ? openSocialInstructions : socialInstructions) +
-        (phase === "model" && asksWhoGoverns ? " " + governanceInstructions : "")
+        (phase === "model" && asksWhoGoverns ? " " + governanceInstructions : "") +
+        (phase === "model" && asksFunctionalCommunities ? " " + functionalCommunityInstructions : "")
       : stageInstructions;
 
     let response;
@@ -986,8 +1025,28 @@ export default {
     };
     const addRoute = (candidate, alternatives, route) => {
       const staysOnTopic = q => {
-        if (topic !== "economy" || phase !== "model") return true;
-        return !/нов[а-яіїєґ]*\s+потреб[а-яіїєґ]*\s+клієнт|перспективн[а-яіїєґ]*\s+напрям[а-яіїєґ]*\s+бізнес|залученн[а-яіїєґ]*\s+клієнт|збільшенн[а-яіїєґ]*\s+продаж/iu.test(q);
+        if (topic === "economy" && phase === "model" &&
+          /нов[а-яіїєґ]*\s+потреб[а-яіїєґ]*\s+клієнт|перспективн[а-яіїєґ]*\s+напрям[а-яіїєґ]*\s+бізнес|залученн[а-яіїєґ]*\s+клієнт|збільшенн[а-яіїєґ]*\s+продаж/iu.test(q))
+          return false;
+        if (topic === "social" && phase === "model") {
+          // An evaluation-of-requests chip assumes that the prior answer
+          // already introduced verification. Merely naming "projects" is
+          // not enough to establish that causal bridge.
+          const aboutProjectScreening =
+            /запит[а-яіїєґ]*|потреб[а-яіїєґ]*/iu.test(q) &&
+            /оцін|перевір|допустим|обґрунт/iu.test(q) &&
+            /проєкт|об'єкт|об’єкт/iu.test(q);
+          const explainedProjectScreening =
+            /(?:суспільн[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+об['’]єкт|суспільн[а-яіїєґ]*\s+проєкт)/iu.test(answer) &&
+            /пісочниц|перевір(?:к|я|ю|и)|оцінюван|системн[а-яіїєґ]*\s+допустим/iu.test(answer);
+          if (aboutProjectScreening && !explainedProjectScreening)
+            return false;
+          // Use the canonical name rather than vague "social projects".
+          if (/суспільн[а-яіїєґ]*\s+проєкт/iu.test(q) &&
+              !/суспільн[а-яіїєґ]*\s+проєкт/iu.test(answer))
+            return false;
+        }
+        return true;
       };
       for (const q of [candidate, ...alternatives, ...extendedRoutes[route]]) {
         if (typeof q === "string" && staysOnTopic(q) && addQuestion(q, route))
