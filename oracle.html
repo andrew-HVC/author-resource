@@ -138,7 +138,7 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     related.className = "related-topics";
     const title = document.createElement("p");
     title.className = "related-title";
-    title.textContent = "Пов’язані теми";
+    title.textContent = "Пов’язані питання";
     const chipRow = document.createElement("div");
     chipRow.className = "topic-buttons";
     for (const topic of suggestions.slice(0, 3)) {
@@ -150,14 +150,11 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
       chip.className = "topic-chip";
       // Question labels always show the exact text sent to the backend.
       // This also prevents mismatches if the old Worker remains deployed.
-      const chipLabel = topic.kind === "term"
-        ? "Термін: " + topic.label
-        : topic.query;
-      chip.textContent = chipLabel;
+      // Every chip displays the exact question that will be sent.
+      // This includes term explanations, so the section contains questions only.
+      chip.textContent = topic.query;
       chip.title = topic.query;
-      chip.setAttribute("aria-label",
-        (topic.kind === "term" ? "Пояснити термін: " : "Запитати Оракула: ") +
-        (topic.kind === "term" ? topic.label : topic.query));
+      chip.setAttribute("aria-label", "Запитати Оракула: " + topic.query);
       chip.addEventListener("click", () => askOracle(topic.query));
       chipRow.append(chip);
     }
