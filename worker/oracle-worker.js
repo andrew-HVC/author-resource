@@ -84,11 +84,15 @@ export default {
     // "energy" in a subsequent economic question must not change disciplines.
     const inferDomain = txt => {
       const input = String(txt || "").toLocaleLowerCase("uk");
-      if (/економ|підприємств|бізнес|попит|пропозиц|ринк|вартіст|виробнич[а-яіїєґ]*\s+ланцюг|дефіцит[а-яіїєґ]*\s+ресурс/.test(input)) return "economy";
+      // Explicit profession and main subject outrank incidental vocabulary.
+      // A reconstruction request can mention "economic ties" without
+      // becoming an economic-theory conversation.
+      if (/економіст|економістк|економічн[а-яіїєґ]*\s+(?:систем|відносин|механізм|теорі)/.test(input)) return "economy";
       if (/відбудов|зруйнован|архітектур|повоєнн|генплан/.test(input)) return "recovery";
       if (/енерг|електр|генерац|накопич|потужн/.test(input)) return "energy";
       if (/транспорт|логіст|перевез/.test(input)) return "transport";
       if (/агро|зерн|врожай|сільськ/.test(input)) return "agriculture";
+      if (/економ|підприємств|бізнес|попит|пропозиц|ринк|вартіст|виробнич[а-яіїєґ]*\s+ланцюг|дефіцит[а-яіїєґ]*\s+ресурс/.test(input)) return "economy";
       if (/територ|міст|простор|розселен/.test(input)) return "territory";
       return "general";
     };
