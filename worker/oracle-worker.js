@@ -72,7 +72,9 @@ export default {
         offered_questions: x.role === "assistant" && Array.isArray(x.offered_questions)
           ? x.offered_questions.filter(q => typeof q === "string")
               .slice(0, 3).map(q => q.trim().slice(0, 150)) : [],
-        engagement_offered: x.role === "assistant" && x.engagement_offered === true
+        engagement_offered: x.role === "assistant" && x.engagement_offered === true,
+        source_issue_key: x.role === "assistant" && typeof x.source_issue_key === "string"
+          ? x.source_issue_key.slice(0, 120) : ""
       }));
     const navigationRoute = ["conceptual", "practical"].includes(body.navigation_route)
       ? body.navigation_route : null;
@@ -359,13 +361,20 @@ export default {
       "Воронка має показувати сенс співпраці: не лише кнопку звернення,",
       "а й конкретні відкриті питання та види компетенцій, які можуть",
       "допомогти перевірити Модель. Не вигадуй наявних вакансій чи фінансування.",
-      "Існують ДВА приводи для пропозиції взаємодії:",
+      "Існують ТРИ приводи для пропозиції взаємодії:",
       "(1) Прямий намір: відвідувач хоче контакту, пропонує співпрацю,",
       "експертизу, дані чи участь. Можливий вже з першого звернення.",
       "(2) Стійке предметне зацікавлення: відвідувач добровільно",
       "поглиблював дослідження авторської Моделі через кілька переходів.",
       "Тоді дозволено ОДНОРАЗОВЕ ненав'язливе запрошення до дискусії,",
       "критики чи можливого долучення. Не видавай інтерес за згоду.",
+      "(3) Перевірена неузгодженість між авторськими джерелами:",
+      "навіть у першій відповіді опиши розбіжні положення, поясни",
+      "наслідок для інтерпретації та попроси добровільно долучитися",
+      "до перевірки і погодження редакції з автором.",
+      "Не називай просто різну деталізацію логічною суперечністю.",
+      "Окремо познач різну сферу застосування, відмінні критерії",
+      "і пряму несумісність тверджень. Сам Оракул НЕ змінює канон.",
       "Число переходів — мінімальний сигнал для запобігання спаму,",
       "а не підстава стверджувати, що людина вже готова співпрацювати.",
       "Абстрактне «Як можна перевірити цей механізм?» — питання про",
@@ -384,6 +393,26 @@ export default {
       "engagement_offer=false. Пропозиція ніколи не означає домовленість.",
       "Запрошення до співпраці може з'явитися навіть на першому кроці,",
       "якщо відвідувач прямо хоче контактувати з автором чи зробити внесок.",
+      "При встановленій за джерелами розбіжності в полі answer:",
+      "1) явно назви її як «Неузгодженість джерел» або",
+      "«Відмінність критеріїв, що потребує узгодження»;",
+      "2) назви принаймні ДВА точні номери джерел та їхні",
+      "неоднакові положення, не приписуй документам зайвого;",
+      "3) поясни, на що ця різниця впливає для читача;",
+      "4) прямо, але добровільно запроси фахівця допомогти",
+      "з порівнянням, критикою чи редакційним узгодженням.",
+      "Заповни source_issue лише коли ПОШУК підтвердив обидва",
+      "номери, і є предмет, який реально потребує авторського рішення.",
+      "status=scope_difference — відмінні критерії або сфери дії",
+      "без доведеної формальної суперечності;",
+      "status=contradiction — два положення не можуть бути",
+      "одночасно правильні за однакових умов;",
+      "status=none — джерела сумісні або доказів розбіжності немає.",
+      "Не вигадуй проблеми заради запрошення. Для status=none",
+      "заповни порожні subject, refs, significance.",
+      "source_issue.refs: точні номери АТ-xxx / МС-xxx (мінімум 2),",
+      "source_issue.subject: коротка назва конкретної проблеми;",
+      "source_issue.significance: у чому редакційний ризик.",
       "Не підмінюй стратегічне дослідження запрошенням до співпраці.",
       "Пропозиція участі добровільна, не вимагай особистих даних у чаті.",
       "Є публічний сайт Моделі: https://archeonomus.tilda.ws/.",
@@ -753,11 +782,23 @@ export default {
                   },
                   conceptual_question: { type: "string" },
                   practical_question: { type: "string" },
-                  related_term: { type: ["string", "null"] }
+                  related_term: { type: ["string", "null"] },
+                  source_issue: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      status: { type: "string", enum: ["none", "scope_difference", "contradiction"] },
+                      subject: { type: "string" },
+                      refs: { type: "array", items: { type: "string" } },
+                      significance: { type: "string" }
+                    },
+                    required: ["status", "subject", "refs", "significance"]
+                  }
                 },
                 required: [
                   "answer", "engagement_offer", "engagement_focus",
-                  "conceptual_question", "practical_question", "related_term"
+                  "conceptual_question", "practical_question", "related_term",
+                  "source_issue"
                 ]
               }
             }
@@ -1217,8 +1258,36 @@ export default {
     const sustainedModelInterest =
       !explicitlyDeclines && introducedModel && modelDiscovered &&
       phase === "model" && modelFollowupCount >= 2 && !previouslyOffered;
-    const showEngagement = activeCollaborationIntent || sustainedModelInterest;
-    const engagementMode = activeCollaborationIntent ? "direct" :
+    // Issue-specific invitation is triggered by source-based evidence, not
+    // the number of dialogue turns or the generic invitation history.
+    const rawIssue = parsed?.source_issue;
+    const issueRefs = Array.isArray(rawIssue?.refs)
+      ? [...new Set(rawIssue.refs.filter(x => typeof x === "string")
+          .map(x => x.trim().toUpperCase().replace(/[–—]/g, "-"))
+          .filter(x => /^(?:АТ|МС)-\\d{3}$/.test(x)))].slice(0, 6) : [];
+    const issueStatus = rawIssue?.status === "contradiction" ||
+      rawIssue?.status === "scope_difference" ? rawIssue.status : "none";
+    const issueSubject = typeof rawIssue?.subject === "string"
+      ? rawIssue.subject.trim().slice(0, 160) : "";
+    const issueSignificance = typeof rawIssue?.significance === "string"
+      ? rawIssue.significance.trim().slice(0, 240) : "";
+    const hasSourceSearch = (data.output || []).some(x => x.type === "file_search_call");
+    const issueIsGrounded = !strategicExploration && introducedModel && !truncated &&
+      hasSourceSearch && sources.length > 0 && issueStatus !== "none" &&
+      issueRefs.length >= 2 && !!issueSubject && !!issueSignificance &&
+      issueRefs.every(id => answer.includes(id)) &&
+      /неузгоджен|відмінн[а-яіїєґ]*\\s+(?:критері|визначенн|підход)|розбіжн|суперечн/iu.test(answer);
+    const issueKey = issueIsGrounded ? issueRefs.slice().sort().join("|") : "";
+    const alreadyInvitedOnIssue = issueKey &&
+      (Array.isArray(body.source_issue_keys) &&
+        body.source_issue_keys.slice(-40).includes(issueKey) ||
+       history.some(x => x.source_issue_key === issueKey));
+    const inviteToResolveIssue = issueIsGrounded &&
+      !alreadyInvitedOnIssue && !explicitlyDeclines;
+    const showEngagement = activeCollaborationIntent || inviteToResolveIssue ||
+      sustainedModelInterest;
+    const engagementMode = inviteToResolveIssue ? "source_issue" :
+      activeCollaborationIntent ? "direct" :
       sustainedModelInterest ? "exploration" : "none";
     const wantsDemonstration =
       introducedModel && /демонстраційн[а-яіїєґ]*\s+модел|демомодел/iu.test(question);
@@ -1243,6 +1312,12 @@ export default {
       engagement_mode: engagementMode,
       engagement_focus: showEngagement ? (wantsDemonstration && activeCollaborationIntent ? "demo" : "general") : "none",
       engagement_topic: showEngagement ? engagementTopic : null,
+      source_issue: issueIsGrounded ? {
+        status: issueStatus, subject: issueSubject,
+        refs: issueRefs, significance: issueSignificance,
+        key: issueKey
+      } : null,
+      source_issue_key: inviteToResolveIssue ? issueKey : "",
       truncated
     });
   }
