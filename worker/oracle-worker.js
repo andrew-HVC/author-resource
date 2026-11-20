@@ -296,7 +296,7 @@ export default {
     const suggestions = [];
     const addQuestion = text => {
       if (typeof text !== "string") return;
-      const q = text.trim().replace(/\\s+/g, " ");
+      const q = text.trim().replace(/\s+/g, " ");
       const key = q.toLocaleLowerCase("uk");
       if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key)) return;
       seen.add(key);
@@ -307,7 +307,7 @@ export default {
 
     // A precise source-backed term can be offered as an optional third question.
     const term = typeof parsed?.related_term === "string"
-      ? parsed.related_term.trim().replace(/\\s+/g, " ")
+      ? parsed.related_term.trim().replace(/\s+/g, " ")
       : "";
     if (term && term.length <= 60 && suggestions.length === 2) {
       const query = "Що означає термін «" + term + "» у Моделі середовища?";
