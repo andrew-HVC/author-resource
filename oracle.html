@@ -83,7 +83,7 @@ function displaySourceName(name) {
   return original;
 }
 
-function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none") {
+function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища") {
   sources = [...new Set(sources.map(displaySourceName))];
   const placeholder = thread.querySelector(".empty");
   if (placeholder) placeholder.remove();
@@ -175,14 +175,14 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     }
   }
 
-  // Only show a cooperation invitation when the response identifies
-  // a concrete interest in examining or developing the Model.
+  // Visitors may ask to cooperate at any stage. Before introducing the
+  // Model, keep the proposed contact subject within their chosen domain.
   if (role === "assistant" && engagementOffer === true) {
     const offer = document.createElement("div");
     offer.className = "engagement-offer";
     const link = document.createElement("a");
     const isDemo = engagementFocus === "demo";
-    link.href = "./?topic=" + encodeURIComponent("Модель середовища") +
+    link.href = "./?topic=" + encodeURIComponent(engagementTopic) +
       "&intent=" + encodeURIComponent(isDemo
         ? "Ініціатива розроблення" : "Професійна дискусія") +
       (isDemo ? "&focus=demo" : "") + "#cooperation";
@@ -243,7 +243,8 @@ async function askOracle(q, route = null) {
       Boolean(data.truncated),
       Array.isArray(data.suggestions) ? data.suggestions : [],
       data.engagement_offer === true,
-      typeof data.engagement_focus === "string" ? data.engagement_focus : "none");
+      typeof data.engagement_focus === "string" ? data.engagement_focus : "none",
+      typeof data.engagement_topic === "string" ? data.engagement_topic : "Модель середовища");
     // Keep reading position at the START of the new answer,
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
