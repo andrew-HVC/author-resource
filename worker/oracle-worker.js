@@ -356,7 +356,7 @@ export default {
               vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
               max_num_results: 8
             }],
-            tool_choice: "auto"
+            tool_choice: phase === "alternatives" ? "required" : "auto"
           }),
           reasoning: { effort: "low" },
           text: {
@@ -554,6 +554,12 @@ export default {
       ? "Як зміниться організація виробництва й територій, якщо енергетика стане частиною їхнього проєктування?"
       : phase === "systems" && topic === "energy"
       ? "Які альтернативні принципи організації енергетичних систем і виробництва варто порівняти?"
+      : phase === "alternatives" && topic === "recovery"
+      ? "Чим Модель середовища відрізняється від відбудови попередньої структури міст і поселень?"
+      : phase === "alternatives" && topic === "energy"
+      ? "Як Модель середовища змінює роль енергетики в організації виробництва та територій?"
+      : phase === "model" && topic === "recovery"
+      ? "Як у Моделі середовища екологічні умови визначають енергетику, інфраструктуру й розселення?"
       : null;
     const addRoute = (candidate, alternatives, route) => {
       if (addQuestion(candidate, route)) return;
