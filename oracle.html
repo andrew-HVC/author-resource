@@ -12,6 +12,8 @@ const status = document.getElementById("result");
 const thread = document.getElementById("thread");
 const restart = document.getElementById("restart");
 const history = []; // Temporary memory: only in this page's JavaScript memory.
+let conversationDomain = null;  // Preserve economic/recovery/etc. intent across 6-exchange truncation.
+let modelDiscovered = false;  // Preserve explicit discovery while following either navigation route.
 
 // Safe subset of Markdown. No innerHTML or third-party scripts.
 function appendInline(target, line) {
@@ -214,7 +216,11 @@ async function askOracle(q, route = null) {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + token.value
       },
-      body: JSON.stringify({ question: q, navigation_route: route, history: history.slice(-12) }),
+      body: JSON.stringify({
+        question: q, navigation_route: route, history: history.slice(-12),
+        conversation_domain: conversationDomain,
+        model_discovered: modelDiscovered
+      }),
       cache: "no-store",
       credentials: "omit",
       redirect: "error"
@@ -241,6 +247,9 @@ async function askOracle(q, route = null) {
     // Keep reading position at the START of the new answer,
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
+    if (typeof data.conversation_domain === "string")
+      conversationDomain = data.conversation_domain;
+    modelDiscovered = data.model_discovered === true;
     history.push(
       { role: "user", content: q, route: route === "conceptual" || route === "practical" ? route : null },
       { role: "assistant", content: data.answer }
@@ -286,6 +295,8 @@ form.addEventListener("submit", event => {
 
 restart.addEventListener("click", () => {
   history.length = 0;
+  conversationDomain = null;
+  modelDiscovered = false;
   thread.replaceChildren();
   const placeholder = document.createElement("p");
   placeholder.className = "empty";
