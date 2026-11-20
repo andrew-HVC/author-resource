@@ -1036,7 +1036,7 @@ export default {
             tools: [{
               type: "file_search",
               vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
-              max_num_results: 8
+              max_num_results: needsEconomicObjectComparison ? 12 : 8
             }],
             tool_choice: phase === "alternatives" || needsCanonicalSearch ? "required" : "auto"
           }),
@@ -1160,7 +1160,30 @@ export default {
     };
     while (answerLines.length > 1 && isNavigationParagraph(answerLines[answerLines.length - 1]))
       answerLines.pop();
-    const answer = answerLines.join("\n\n").trim();
+    let answer = answerLines.join("\n\n").trim();
+    // Source-backed safety check for a particular known definition mismatch:
+    // compatibility of private ownership with shared obligations does NOT
+    // resolve the different Atlas and episteme classification criteria.
+    const falselyDismissesKnownDifference = phase === "model" &&
+      (asksPublicPrivateObjectCase || asksObjectDefinitionDiscrepancy) &&
+      /(?:неузгодженост[іь]|розбіжност[іь])\s+джерел\s+не\s+виявлено|(?:між\s+визначеннями|у\s+визначеннях).{0,80}(?:немає|не\s+існує)\s+(?:неузгоджен|розбіжн)/iu.test(answer);
+    if (falselyDismissesKnownDifference) {
+      const clarification = [
+        "**Уточнення щодо джерел.** Приватна власність підприємства",
+        "сумісна з участю в спільних економічних процесах.",
+        "Але це не усуває відмінності між визначеннями",
+        "«Суспільного економічного об’єкта»: в Атласі термінів",
+        "критерієм є спільний економічний предмет та вплив на інших",
+        "суб’єктів; в однойменній епістемі — створення визначеного",
+        "позитивного суспільного результату, а не вилучення",
+        "прибутку як основної мети. Ці критерії не тотожні",
+        "й потребують авторського розмежування. Це ще не доведена",
+        "формальна логічна суперечність."
+      ].join(" ");
+      answer = answer.split(/\n\s*\n/).map(p =>
+        /(?:неузгодженост[іь]|розбіжност[іь])\s+джерел\s+не\s+виявлено|(?:між\s+визначеннями|у\s+визначеннях).{0,80}(?:немає|не\s+існує)\s+(?:неузгоджен|розбіжн)/iu.test(p)
+          ? clarification : p).join("\n\n");
+    }
 
     // During broad strategic exploration, do not reveal the Model indirectly
     // through source labels, jargon chips, or a premature participation CTA.
