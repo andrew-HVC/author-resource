@@ -1372,7 +1372,26 @@ export default {
       ["Какие новые компетенции и партнёрства могут понадобиться вашей организации?",
        "Какие риски следует проверить перед выбором пути развития?"]
     ] : fallbacks[topic];
-    const activeRoutes = phase === "model" && topic === "social" && asksSocietalResults ? [
+    const activeRoutes = phase === "model" &&
+      asksSocioPoliticalClassification ? [
+      [
+        "Чим соціально-економічна організація Моделі середовища відрізняється від традиційної опозиції капіталізму й соціалізму?",
+        "Які механізми приватної автономії та спільного нормативного врядування поєднує Модель середовища?"
+      ],
+      [
+        "Як перевірити, чи спільні норми кластерної громади не обмежують приватні економічні рішення без належної підстави?",
+        "Якими фактичними показниками перевірити відповідність діяльності громад і операторів визначеним повноваженням?"
+      ]
+    ] : phase === "model" && asksCoercionRisk ? [
+      [
+        "Де у Моделі середовища проходить межа між автономією персонального домену й обов'язковими нормами спільного простору?",
+        "Які обмеження компетенції громади та цифрової копії повинні запобігати свавіллю?"
+      ],
+      [
+        "Як перевірити, що норма застосовується лише до підтвердженого впливу на спільне середовище?",
+        "Як виявляти випадки, коли цифровий оператор вийшов за межі делегованих повноважень?"
+      ]
+    ] : phase === "model" && topic === "social" && asksSocietalResults ? [
       [
         "Чим відрізняється створення освітньої можливості від досягнення заявленого суспільного результату?",
         "Як поєднуються стійкість функціонування освітнього центру та фактичний суспільний результат його роботи?"
@@ -1543,6 +1562,17 @@ export default {
     };
     const addRoute = (candidate, alternatives, route) => {
       const staysOnTopic = q => {
+        // A general primer on capitalism/socialism misses the visitor's
+        // inquiry into the author's concrete socio-economic architecture.
+        if (phase === "model" && asksSocioPoliticalClassification &&
+          /капіталізм|соціалізм|капіталістичн|соціалістичн/iu.test(q) &&
+          !/Модел[ьяіюі]?\s+середовищ|кластер|приватн[а-яіїєґ]*\s+контур|спільн[а-яіїєґ]*\s+норм/iu.test(q))
+          return false;
+        // An abstract entitlement to exit all digital systems is not
+        // established in the canonical Model; avoid presenting it as given.
+        if (phase === "model" && asksCoercionRisk &&
+          /відмов[а-яіїєґ]*\s+від\s+цифров[а-яіїєґ]*\s+участ|прав[а-яіїєґ]*\s+на\s+(?:повн[а-яіїєґ]*\s+)?вихід\s+із\s+систем/iu.test(q))
+          return false;
         // MС-080 requires evaluation of both the object's functioning and
         // the separate social result. Reject false either/or navigation.
         if (phase === "model" &&
