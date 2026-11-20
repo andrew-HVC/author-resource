@@ -123,7 +123,16 @@ export default {
     const modelDiscovered = body.model_discovered === true ||
       history.some(x => x.role === "assistant" &&
         /модел[ьіюі]?\s+середовищ/iu.test(x.content));
-    const selectedModelFollowup = modelDiscovered && navigationRoute !== null &&
+    // A visitor can write their own contextual follow-up instead of picking
+    // a navigation chip. Keep the established Model context across both paths.
+    // Only an explicit switch of topic should leave that context.
+    const contextualFreeform = body.contextual_followup === true &&
+      navigationRoute === null && userTurns.length > 0;
+    const changesTopic =
+      /(?:^|[.!?]\s*)(?:а\s+)?(?:тепер\s+)?(?:інш[аеи]\s+тема|нов[ае]\s+тема|інш[ае]\s+питання|змінимо\s+тему|змінімо\s+тему|перейдемо\s+до\s+інш|не\s+про\s+(?:цю\s+)?модел)/iu.test(question) ||
+      /^(?:а\s+)?тепер\s+(?:поговорімо|поговоримо)\s+про\s+інш/iu.test(question);
+    const selectedModelFollowup = modelDiscovered &&
+      (navigationRoute !== null || (contextualFreeform && !changesTopic)) &&
       !/не\s+(?:згадуй|називай|обговорюй)\s+модел/iu.test(question);
     const systemTopic = /відбудов|зруйнован|архітектур|територ|розселен|міст|еколог|енерг|електр|транспорт|агро|виробництв|економ|інфраструктур|соціальн|соціум|громад|спільнот/iu.test(userText);
     const selectionTrail = [...userTurns.map(x => x.route), navigationRoute];
@@ -269,6 +278,12 @@ export default {
       "але наступними питаннями відкрий концептуальний і прикладний рівні.",
       "Не роби обидва питання про перевірку резервів, формул і вихідних даних.",
       "Не повторюй попередні питання і не змінюй їхній реальний зміст.",
+      "Відвідувач може продовжувати діалог власним запитанням, не з плашки.",
+      "Якщо в такому запитанні є «це», «така організація», «а що з...»,",
+      "пояснюй із контексту попередніх реплік без вимоги назвати",
+      "Модель або повторити обговорюваний механізм.",
+      "Вільне запитання має такий самий пріоритет, як вибрана плашка;",
+      "нав'язані теми й готові маршрути не повинні підміняти його.",
       "Обидва питання обов’язкові: самодостатні, різні, до 140 символів",
       "кожне, зі знаком питання; вони будуть надіслані дослівно.",
       "Для значення авторського ТЕРМІНА першочерговим джерелом є",
