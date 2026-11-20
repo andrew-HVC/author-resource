@@ -208,16 +208,20 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
       ? (displayIssueRefs.length ? displayIssueRefs.join(" і ") : "Матеріали Моделі") +
         ": " + sourceIssue.subject.slice(0, 160) : "";
     const isDemo = (engagementFocus === "demo" || engagementMode === "demo") && !isSourceIssue;
+    const isAuthorContact = engagementMode === "author_contact";
     link.href = "./?topic=" + encodeURIComponent(engagementTopic) +
       "&intent=" + encodeURIComponent(isDemo
         ? "Ініціатива розроблення" : "Професійна дискусія") +
       (isDemo ? "&focus=demo" : "") +
+      (isAuthorContact ? "&focus=author" : "") +
       (isSourceIssue ? "&issue=" + encodeURIComponent(issueContext) : "") +
       "#cooperation";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.textContent = isSourceIssue
       ? "Долучитися до усунення неузгодженості"
+      : isAuthorContact
+        ? "Відкрити форму звернення до автора"
       : isDemo
         ? "Долучитися до розроблення Демонстраційної моделі"
         : engagementMode === "exploration"
@@ -228,6 +232,8 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
       ? "Потрібна незалежна звірка " +
         (displayIssueRefs.length ? displayIssueRefs.join(" та ") : "авторських документів") +
         ". Можна запропонувати аргументи або редакцію для розгляду автором. Форма готує текст для копіювання і не надсилає його."
+      : isAuthorContact
+        ? "Форма відкриється на сторінці проєкту. Наразі вона лише готує звернення для копіювання; автоматичного надсилання та прямого каналу зв’язку ще немає."
       : isDemo
         ? "Можлива участь у передпроєктній підготовці та створенні цифрової Демонстраційної моделі: дані, просторові й інженерні рішення, розрахунки, моделювання та критична перевірка. Це ще не натурний пілот. Форма готує звернення для копіювання і не надсилає його."
         : engagementMode === "exploration"
