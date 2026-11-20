@@ -327,36 +327,74 @@ export default {
     // about the author's proposal, even without its formal title.
     const authorModelAllusion =
       /ви\s+(?:говорите|пишете|стверджуєте)\s+про\s+цілісн[а-яіїєґ]*\s+організаці[а-яіїєґ]*\s+середовищ/iu.test(question);
-    // Recognize inflected titles across the WHOLE authorial corpus.
-    // Require two neighboring meaningful stems to limit false positives.
-    const conceptTokens = value =>
+    // Match defined corpus concepts before open/general routing.
+    // Normalization is applied to BOTH source titles and visitor questions.
+    // This also handles transliterated authorial identifiers, e.g. КВАТТ.
+    const normalizeConceptWord = word => {
+      const lower = String(word || "").toLocaleLowerCase("uk");
+      const aliases = { "кватт": "kwatt" };
+      return aliases[lower] || lower;
+    };
+    const conceptWords = value =>
       (String(value || "").toLocaleLowerCase("uk")
         .replace(/[’'ʼ]/gu, "")
         .match(/[a-zа-яіїєґ0-9]+/gu) || [])
         .filter(word => word.length >= 4)
-        .map(word => word.slice(0, 5));
+        .map(normalizeConceptWord);
+    const conceptTokens = value => conceptWords(value).map(word => word.slice(0, 5));
     const questionConceptTokens = conceptTokens(question);
+    const isNakedTermQuestion =
+      /^(?:(?:а|і|ну)\s+)?[«"“]?[a-zа-яіїєґ0-9/-]{3,45}[»"”]?\s*[?!.]*$/iu.test(question);
     const isConceptRequest =
-      /(?:розкаж|поясни|що\s+таке|що\s+означає|яка\s+роль|як\s+працю|як\s+влаштован|як\s+формує|який\s+принцип|у\s+чому\s+полягає|чому\s+саме|з\s+чого\s+склада|про\s+[«"“]|щодо\s+[«"“])/iu.test(question);
-    const namesCanonicalConcept = isConceptRequest &&
-      Object.values(REFERENCE_TITLES).some(title => {
-        const tokens = conceptTokens(title);
-        if (tokens.length < 2) {
-          // Single-word Atlas entries are often ordinary general concepts.
-          // Open authorial retrieval for them if the visitor explicitly
-          // asks in the Model context or quotes the named entry.
-          return tokens.length === 1 &&
-            questionConceptTokens.includes(tokens[0]) &&
-            (/модел[а-яіїєґ]*\s+середовищ|авторськ/iu.test(question) ||
-             /[«"“][^»"”]+[»"”]/u.test(question));
-        }
-        for (let i = 0; i + 1 < tokens.length; i++)
-          for (let j = 0; j + 1 < questionConceptTokens.length; j++)
-            if (tokens[i] === questionConceptTokens[j] &&
-                tokens[i + 1] === questionConceptTokens[j + 1])
-              return true;
-        return false;
-      });
+      /(?:розкаж|поясни|що\s+таке|що\s+означає|яка\s+роль|як\s+працю|як\s+влаштован|як\s+формує|який\s+принцип|у\s+чому\s+полягає|чому\s+саме|з\s+чого\s+склада|про\s+[«"“]|щодо\s+[«"“])/iu.test(question) ||
+      isNakedTermQuestion;
+    const canonicalMatches = isConceptRequest
+      ? Object.entries(REFERENCE_TITLES).map(entry => {
+          const [id, title] = entry;
+          const titleTokens = conceptTokens(title);
+          if (!titleTokens.length) return null;
+          if (titleTokens.length === 1) {
+            const token = titleTokens[0];
+            if (!questionConceptTokens.includes(token)) return null;
+            const quoted = /[«"“][^»"”]+[»"”]/u.test(question);
+            const modelContext =
+              /модел[а-яіїєґ]*\s+середовищ|авторськ/iu.test(question);
+            // Technical identifiers with uppercase Latin titles are
+            // distinctive even in "а KWATT?" or "що таке КВАТТ?".
+            const isDistinctiveIdentifier = /^[A-Z][A-Z0-9/-]{3,}$/u.test(title.trim());
+            if (!quoted && !modelContext && !isDistinctiveIdentifier)
+              return null;
+            return { entry, score: isDistinctiveIdentifier ? 1000 : 600 };
+          }
+          let longest = 0;
+          for (let i = 0; i < titleTokens.length; i++)
+            for (let j = 0; j < questionConceptTokens.length; j++) {
+              let n = 0;
+              while (i + n < titleTokens.length &&
+                     j + n < questionConceptTokens.length &&
+                     titleTokens[i + n] === questionConceptTokens[j + n]) n++;
+              if (n > longest) longest = n;
+            }
+          // Two consecutive meaningful title words form a named concept.
+          if (longest < 2) return null;
+          return { entry, score: 20 * longest + (longest === titleTokens.length ? 10 : 0) };
+        }).filter(Boolean).sort((a,b)=>b.score-a.score)
+      : [];
+    const canonicalEntry = canonicalMatches.length ? canonicalMatches[0].entry : null;
+    const namesCanonicalConcept = Boolean(canonicalEntry);
+    const canonicalConceptTitle = canonicalEntry ? canonicalEntry[1] : null;
+    const canonicalConceptRefs = canonicalEntry
+      ? Object.entries(REFERENCE_TITLES)
+          .filter(([, title]) => {
+            const titleTokens = conceptTokens(title);
+            const mainTokens = conceptTokens(canonicalConceptTitle);
+            if (mainTokens.length === 1) return titleTokens.includes(mainTokens[0]);
+            const sharedPrefix = Math.min(3,mainTokens.length,titleTokens.length);
+            return sharedPrefix >= 2 &&
+              mainTokens.slice(0,sharedPrefix)
+                .every((token,i)=>token===titleTokens[i]);
+          }).slice(0,4)
+      : [];
     const directModelInquiry =
       namesCanonicalConcept ||
       /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(question) ||
@@ -394,6 +432,13 @@ export default {
     const firstVisitorQuestion = userTurns.length ? userTurns[0].content : question;
     let domain = domainWhitelist.includes(body.conversation_domain)
       ? body.conversation_domain : inferDomain(firstVisitorQuestion);
+    // Derive a specific matched term's domain from the known corpus titles,
+    // not a visually similar everyday meaning (e.g. kilowatt -> energy).
+    if (canonicalEntry && (domain === "general" || userTurns.length === 0)) {
+      const canonicalDomain = inferDomain(canonicalConceptRefs
+        .map(([, title]) => title).join(" "));
+      if (canonicalDomain !== "general") domain = canonicalDomain;
+    }
     // A boolean from the current page takes precedence: an explicitly
     // changed topic must not be reclassified by older Model replies still
     // present in the last-six-turn history.
@@ -1268,6 +1313,22 @@ export default {
       "зворотні впливи можливі, а метод діє на кожній стадії.",
       "Не підставляй цей перелік у відповідь на невідповідну тему."
     ].join(" ");
+    const canonicalConceptInstructions = canonicalEntry ? [
+      "Розпізнано конкретний термін авторського корпусу: «" +
+        canonicalConceptTitle + "».",
+      "У першоджерелах шукай його КАНОНІЧНУ назву та відповідний зміст.",
+      "Пов'язані записи: " +
+        canonicalConceptRefs.map(([id,title]) => id + " «" + title + "»").join("; ") + ".",
+      "Пріоритет має авторське визначення, а не схоже",
+      "поширене слово чи фізична одиниця з іншого контексту.",
+      "Зокрема KWATT (також КВАТТ) у цьому корпусі —",
+      "авторський економічний термін, а НЕ кіловат (кВт, kW).",
+      "Не підміняй його описом потужності чи кіловат-години.",
+      "Якщо конкретні властивості не підтверджено знайденими",
+      "матеріалами, зазнач це й не вигадуй деталей.",
+      "За наявності джерел дай конкретне визначення,",
+      "призначення, механізм і причинні взаємозв'язки."
+    ].join(" ") : "";
     const authorPrivacyInstructions = [
       "Конфіденційність автора: особа автора Моделі середовища не розкривається.",
       "Не називай ім’я, прізвище, псевдонім, біографічні чи особисті",
@@ -1290,8 +1351,15 @@ export default {
         ? " " + spatialDemoStageInstructions : "") +
       " " + authorPrivacyInstructions +
       " " + concreteAnswerInstructions +
+      (canonicalConceptInstructions ? " " + canonicalConceptInstructions : "") +
       (asksSpatialInfluenceHierarchy ? " " + spatialInfluenceHierarchyInstructions : "");
 
+    const queryForModel = canonicalEntry && canonicalConceptRefs.length
+      ? question + "\n\n[Пошуковий орієнтир: канонічний авторський термін «" +
+        canonicalConceptTitle + "»; документи: " +
+        canonicalConceptRefs.map(([id,title]) => id + " «" + title + "»").join("; ") +
+        ". Ця примітка лише уточнює зміст і не змінює запитання користувача.]"
+      : question;
     let response;
     try {
       response = await fetch("https://api.openai.com/v1/responses", {
@@ -1304,7 +1372,7 @@ export default {
           model: "gpt-6-luna",
           instructions,
           input: [...history.map(x => ({ role: x.role, content: x.content })),
-            { role: "user", content: question }],
+            { role: "user", content: queryForModel }],
           ...(strategicExploration ? {} : {
             tools: [{
               type: "file_search",
