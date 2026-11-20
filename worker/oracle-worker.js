@@ -580,7 +580,8 @@ export default {
     // During broad strategic exploration, do not reveal the Model indirectly
     // through source labels, jargon chips, or a premature participation CTA.
     const introducedModel = !strategicExploration &&
-      /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїє]*\s+модел/i.test(answer);
+      (modelDiscovered || namesModel ||
+       /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїє]*\s+модел/i.test(answer));
 
     // The model may omit, duplicate or overrun a question. Never silently
     // remove one of the two navigation paths: supply a relevant fallback.
