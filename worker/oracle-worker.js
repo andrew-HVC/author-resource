@@ -118,7 +118,7 @@ export default {
     };
     const domainWhitelist = ["economy", "recovery", "energy", "transport", "agriculture", "social", "territory", "general"];
     const firstVisitorQuestion = userTurns.length ? userTurns[0].content : question;
-    const domain = domainWhitelist.includes(body.conversation_domain)
+    let domain = domainWhitelist.includes(body.conversation_domain)
       ? body.conversation_domain : inferDomain(firstVisitorQuestion);
     const modelDiscovered = body.model_discovered === true ||
       history.some(x => x.role === "assistant" &&
@@ -131,6 +131,8 @@ export default {
     const changesTopic =
       /(?:^|[.!?]\s*)(?:а\s+)?(?:тепер\s+)?(?:інш[аеи]\s+тема|нов[ае]\s+тема|інш[ае]\s+питання|змінимо\s+тему|змінімо\s+тему|перейдемо\s+до\s+інш|не\s+про\s+(?:цю\s+)?модел)/iu.test(question) ||
       /^(?:а\s+)?тепер\s+(?:поговорімо|поговоримо)\s+про\s+інш/iu.test(question);
+    const explicitNewTopic = contextualFreeform && changesTopic && !directModelInquiry;
+    if (explicitNewTopic) domain = inferDomain(question);
     const selectedModelFollowup = modelDiscovered &&
       (navigationRoute !== null || (contextualFreeform && !changesTopic)) &&
       !/не\s+(?:згадуй|називай|обговорюй)\s+модел/iu.test(question);
@@ -141,7 +143,8 @@ export default {
       conceptualRun++;
     // A conceptual click broadens the frame; only explicit interest in
     // structural alternatives unlocks Model retrieval.
-    const phase = (namesModel || selectedModelFollowup) ? "model" :
+    const phase = explicitNewTopic ? "open" :
+      (namesModel || selectedModelFollowup) ? "model" :
       (seeksAlternative && systemTopic) ? "alternatives" :
       (conceptualRun >= 1 && systemTopic) ? "systems" : "open";
     const strategicExploration = phase === "open" || phase === "systems";
@@ -1049,7 +1052,7 @@ export default {
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше.",
       sources: introducedModel ? sources : [],
       conversation_domain: domain,
-      model_discovered: introducedModel || modelDiscovered,
+      model_discovered: introducedModel || (modelDiscovered && !explicitNewTopic),
       suggestions,
       engagement_offer: showEngagement,
       engagement_mode: engagementMode,
