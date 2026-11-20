@@ -200,8 +200,12 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     const isSourceIssue = engagementMode === "source_issue" &&
       sourceIssue && Array.isArray(sourceIssue.refs) &&
       typeof sourceIssue.subject === "string";
+    const displayIssueRefs = isSourceIssue && Array.isArray(sourceIssue.display_refs)
+      ? sourceIssue.display_refs.filter(name => typeof name === "string").slice(0, 4)
+      : [];
     const issueContext = isSourceIssue
-      ? sourceIssue.refs.slice(0, 4).join(", ") + ": " + sourceIssue.subject.slice(0, 160) : "";
+      ? (displayIssueRefs.length ? displayIssueRefs.join(" і ") : "Матеріали Моделі") +
+        ": " + sourceIssue.subject.slice(0, 160) : "";
     const isDemo = engagementFocus === "demo" && !isSourceIssue;
     link.href = "./?topic=" + encodeURIComponent(engagementTopic) +
       "&intent=" + encodeURIComponent(isDemo
@@ -220,7 +224,8 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
           : "Підготувати пропозицію співпраці або критичного розгляду";
     const explanation = document.createElement("p");
     explanation.textContent = isSourceIssue
-      ? "Потрібна незалежна звірка положень " + sourceIssue.refs.join(" і ") +
+      ? "Потрібна незалежна звірка " +
+        (displayIssueRefs.length ? displayIssueRefs.join(" та ") : "авторських документів") +
         ". Можна запропонувати аргументи або редакцію для розгляду автором. Форма готує текст для копіювання і не надсилає його."
       : isDemo
         ? "Мета — спільно створити дані для оцінювання інвестиційних сценаріїв, а не інвестувати у готовий проєкт. Форма готує звернення для копіювання і не надсилає його."
