@@ -341,7 +341,15 @@ export default {
     const namesCanonicalConcept = isConceptRequest &&
       Object.values(REFERENCE_TITLES).some(title => {
         const tokens = conceptTokens(title);
-        if (tokens.length < 2) return false;
+        if (tokens.length < 2) {
+          // Single-word Atlas entries are often ordinary general concepts.
+          // Open authorial retrieval for them if the visitor explicitly
+          // asks in the Model context or quotes the named entry.
+          return tokens.length === 1 &&
+            questionConceptTokens.includes(tokens[0]) &&
+            (/модел[а-яіїєґ]*\s+середовищ|авторськ/iu.test(question) ||
+             /[«"“][^»"”]+[»"”]/u.test(question));
+        }
         for (let i = 0; i + 1 < tokens.length; i++)
           for (let j = 0; j + 1 < questionConceptTokens.length; j++)
             if (tokens[i] === questionConceptTokens[j] &&
@@ -1281,8 +1289,7 @@ export default {
       (phase === "model" && hasSpatialModelContext && asksSpatialBenefits
         ? " " + spatialDemoStageInstructions : "") +
       " " + authorPrivacyInstructions +
-      (phase === "model" || phase === "alternatives"
-        ? " " + concreteAnswerInstructions : "") +
+      " " + concreteAnswerInstructions +
       (asksSpatialInfluenceHierarchy ? " " + spatialInfluenceHierarchyInstructions : "");
 
     let response;
