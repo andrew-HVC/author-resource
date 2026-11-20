@@ -71,7 +71,8 @@ export default {
           ? x.route : null,
         offered_questions: x.role === "assistant" && Array.isArray(x.offered_questions)
           ? x.offered_questions.filter(q => typeof q === "string")
-              .slice(0, 3).map(q => q.trim().slice(0, 150)) : []
+              .slice(0, 3).map(q => q.trim().slice(0, 150)) : [],
+        engagement_offered: x.role === "assistant" && x.engagement_offered === true
       }));
     const navigationRoute = ["conceptual", "practical"].includes(body.navigation_route)
       ? body.navigation_route : null;
@@ -314,12 +315,18 @@ export default {
       "Воронка має показувати сенс співпраці: не лише кнопку звернення,",
       "а й конкретні відкриті питання та види компетенцій, які можуть",
       "допомогти перевірити Модель. Не вигадуй наявних вакансій чи фінансування.",
-      "Поле engagement_offer відображає НАМІР ОСОБИСТО взаємодіяти:",
-      "зв'язатися з автором, запропонувати співпрацю, власну експертизу,",
-      "дані для випробування, фаховий розгляд чи участь у розробленні.",
-      "Воно не залежить від кількості кроків або знайомства з Моделлю.",
+      "Існують ДВА приводи для пропозиції взаємодії:",
+      "(1) Прямий намір: відвідувач хоче контакту, пропонує співпрацю,",
+      "експертизу, дані чи участь. Можливий вже з першого звернення.",
+      "(2) Стійке предметне зацікавлення: відвідувач добровільно",
+      "поглиблював дослідження авторської Моделі через кілька переходів.",
+      "Тоді дозволено ОДНОРАЗОВЕ ненав'язливе запрошення до дискусії,",
+      "критики чи можливого долучення. Не видавай інтерес за згоду.",
+      "Число переходів — мінімальний сигнал для запобігання спаму,",
+      "а не підстава стверджувати, що людина вже готова співпрацювати.",
       "Абстрактне «Як можна перевірити цей механізм?» — питання про",
       "методологію, а не пропозиція особисто проводити перевірку.",
+      "Не припускай згоду на контакт і не вимагай персональних даних.",
       "Не встановлюй engagement_offer=true лише через довгий допис,",
       "емоційність, критику міст або обговорення суспільних проблем.",
       "Поверни engagement_focus=demo лише якщо людина вже прямо",
@@ -973,10 +980,11 @@ export default {
         suggestions.push({ kind: "term", label: term, query });
     }
 
-    // A cooperation link is an action for a visitor who WANTS to interact,
-    // not a reward for clicking a fixed number of funnel steps.
-    // "Як можна перевірити?" asks for a method; it does NOT imply that the
-    // visitor personally offers to perform the test.
+    // Two distinct invitation modes:
+    // explicit willingness can surface from the FIRST turn, while sustained
+    // inquiry into the author's Model can justify one optional invitation
+    // after two visitor-selected followups. This never implies consent.
+    // "Як можна перевірити?" is a method question, not personal intent.
     const asksForContact =
       /(?:як|де|куди|з\s+ким)\s+(?:мені\s+|нам\s+|можна\s+|краще\s+){0,3}(?:зв[’']язатис[ья]?|сконтактуват[иа]?|написат[иа]?\s+(?:автор|вам|розробник)|звернут[иа]?(?:ся)?\s+(?:до\s+автор|до\s+вас)|надіслат[иа]?\s+(?:сво[яіїєґ]*\s+)?(?:пропозиц|матеріал|зауважен|дані))/iu.test(question) ||
       /(?:хочу|бажаю|планую|потрібно)\s+.{0,80}(?:контакт\s+автора|зв[’']язатис[ья]?\s+з\s+(?:автор|вами|розробник))/iu.test(question);
@@ -994,7 +1002,17 @@ export default {
       /(?:не\s+(?:хочу|готов[а-яіїєґ]*|планую|бажаю|можу|можемо)\s+.{0,70}(?:співпрац|долуч|участ|надат|перевір|тестуват))|(?:(?:співпрац|участ|контакт)\s+.{0,24}не\s+цікав)/iu.test(question);
     const activeCollaborationIntent =
       !explicitlyDeclines && (asksForContact || asksToJoin || offersContribution || directReviewOffer);
-    const showEngagement = activeCollaborationIntent;
+    const previouslyOffered = body.engagement_shown === true ||
+      history.some(x => x.engagement_offered);
+    const selectedFollowups = [
+      ...userTurns.map(x => x.route), navigationRoute
+    ].filter(x => x === "conceptual" || x === "practical").length;
+    const sustainedModelInterest =
+      !explicitlyDeclines && introducedModel && modelDiscovered &&
+      phase === "model" && selectedFollowups >= 2 && !previouslyOffered;
+    const showEngagement = activeCollaborationIntent || sustainedModelInterest;
+    const engagementMode = activeCollaborationIntent ? "direct" :
+      sustainedModelInterest ? "exploration" : "none";
     const wantsDemonstration =
       introducedModel && /демонстраційн[а-яіїєґ]*\s+модел|демомодел/iu.test(question);
     const engagementTopic = introducedModel ? "Модель середовища" : ({
@@ -1015,7 +1033,8 @@ export default {
       model_discovered: introducedModel || modelDiscovered,
       suggestions,
       engagement_offer: showEngagement,
-      engagement_focus: showEngagement ? (wantsDemonstration ? "demo" : "general") : "none",
+      engagement_mode: engagementMode,
+      engagement_focus: showEngagement ? (wantsDemonstration && activeCollaborationIntent ? "demo" : "general") : "none",
       engagement_topic: showEngagement ? engagementTopic : null,
       truncated
     });
