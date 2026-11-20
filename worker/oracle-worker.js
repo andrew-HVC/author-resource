@@ -811,6 +811,15 @@ export default {
         suggestions.push({ kind: "term", label: term, query });
     }
 
+    // Opening a Model article or asking for a term is NOT an expression of
+    // willingness to collaborate. Show the invitation only after a user's
+    // explicit intent or substantive interest in personally validating it.
+    const activeCollaborationIntent =
+      /співпрац|долуч|участ[ьиі]|допомогти\s+(?:перевір|розроб)|хочу\s+(?:перевір|розроб)|готов[а-яіїєґ]*\s+(?:перевір|долуч)|потрібн[а-яіїєґ]*\s+консультац/iu.test(question) ||
+      (modelDiscovered && /(?:як|чим)\s+(?:я|ми)?\s*(?:можу|можемо|можна)\s+(?:провести\s+)?(?:перевір|тестуват|випробуват)/iu.test(question));
+    const showEngagement = introducedModel && activeCollaborationIntent &&
+      (Boolean(parsed?.engagement_offer) ||
+       /співпрац|долуч|участ[ьиі]|допомогти|хочу\s+(?:перевір|розроб)/iu.test(question));
     return json({
       answer: answer ||
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше.",
@@ -818,10 +827,9 @@ export default {
       conversation_domain: domain,
       model_discovered: introducedModel || modelDiscovered,
       suggestions,
-      engagement_offer: introducedModel && Boolean(parsed?.engagement_offer),
-      engagement_focus: introducedModel && parsed?.engagement_offer &&
-        ["demo", "general"].includes(parsed?.engagement_focus)
-        ? parsed.engagement_focus : "none",
+      engagement_offer: showEngagement,
+      engagement_focus: showEngagement && ["demo", "general"].includes(parsed?.engagement_focus)
+        ? parsed.engagement_focus : showEngagement ? "general" : "none",
       truncated
     });
   }
