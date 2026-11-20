@@ -259,6 +259,38 @@ export default {
     if (!question || question.length > 4000)
       return json({ error: "Question must contain 1–4000 characters" }, 400);
 
+    // Identity is intentionally private. Handle direct questions deterministically:
+    // do not let retrieval, model inference or source metadata reveal a person.
+    // Inquiries into the principle of unified authorship are NOT identity queries.
+    const asksAuthorIdentity =
+      /(?:хто|чий|чиє|чиї)\s+.{0,75}(?:автор|розробник|творець|створив|розробив|запропонував|стоїть\s+за)/iu.test(question) ||
+      /(?:назвіть|назви|скажіть|скажи|повідомте|вкажіть)\s+.{0,65}(?:автор|ім[’'ʼ]?я|прізвищ)/iu.test(question) ||
+      /(?:ім[’'ʼ]?я|прізвищ|особа|біограф|контакт|пошту|email|e-mail|адресу)\s+.{0,65}(?:автор|розробник|творц)/iu.test(question) ||
+      /(?:автор|розробник|творц)[а-яіїєґ]*\s+.{0,65}(?:хто|ім[’'ʼ]?я|прізвищ|контакт|біограф|пошт|email)/iu.test(question) ||
+      /хто\s+(?:створив|розробив|запропонував|стоїть\s+за)/iu.test(question) ||
+      /(?:як|де|куди|чи\s+можна)\s+.{0,70}(?:зв[’'ʼ]?язатис[ья]?|написат[иа]|звернут[иа]?(?:ся)?|контакт(?:уват[иа])?)\s+.{0,50}(?:автор|розробник)/iu.test(question) ||
+      /(?:контакт[а-яіїєґ]*|зв[’'ʼ]?язок)\s+(?:з\s+)?(?:автор|розробник)/iu.test(question);
+    const clearlyDifferentWork =
+      /(?:роман[а-яіїєґ]*|фільм[а-яіїєґ]*|серіал[а-яіїєґ]*|пісн[а-яіїєґ]*|повіст[а-яіїєґ]*|вірш[а-яіїєґ]*|книг[а-яіїєґ]*|поем[а-яіїєґ]*)/iu.test(question) &&
+      !/модел[а-яіїєґ]*\s+середовищ/iu.test(question);
+    if (asksAuthorIdentity && !clearlyDifferentWork) {
+      return json({
+        answer: "Особа автора Моделі середовища не розкривається, але ви можете зв’язатися з ним через форму зворотного зв’язку.",
+        sources: [],
+        conversation_domain: typeof body.conversation_domain === "string" ? body.conversation_domain : "general",
+        model_discovered: body.model_discovered === true || /модел[а-яіїєґ]*\s+середовищ/iu.test(question),
+        suggestions: [],
+        engagement_offer: true,
+        engagement_mode: "author_contact",
+        engagement_focus: "general",
+        engagement_topic: "Модель середовища",
+        demo_engagement_offered: false,
+        source_issue: null,
+        source_issue_key: "",
+        truncated: false
+      });
+    }
+
     // Stateless progression follows chosen conceptual navigation, not turn count.
     const rawHistory = Array.isArray(body.history) ? body.history.slice(-12) : [];
     const history = rawHistory.filter(x => x &&
@@ -1146,13 +1178,24 @@ export default {
         (phase === "model" && asksRelevantEpistemeList ? " " + enterpriseInfrastructureSourceInstructions : "") +
         (phase === "model" && asksObjectReproduction ? " " + economicReproductionInstructions : "")
       : stageInstructions;
+    const authorPrivacyInstructions = [
+      "Конфіденційність автора: особа автора Моделі середовища не розкривається.",
+      "Не називай ім’я, прізвище, псевдонім, біографічні чи особисті",
+      "контактні дані автора, навіть якщо вони трапилися у джерелах,",
+      "метаданих, посиланнях або попередніх репліках.",
+      "На прямі запити про особу автора запропонуй форму зворотного зв’язку;",
+      "не стверджуй, що автора не вдалося знайти через брак даних.",
+      "На запитання про принцип єдиного авторства пояснюй його зміст",
+      "без персоніфікації та без припущень щодо особи автора."
+    ].join(" ");
     const instructions = instructionsByDomain +
       (phase === "model" && asksSocioPoliticalClassification
         ? " " + socioPoliticalClassificationInstructions : "") +
       (phase === "model" && asksCoercionRisk
         ? " " + coercionRiskInstructions : "") +
       (phase === "model" && hasSpatialModelContext && asksSpatialBenefits
-        ? " " + spatialDemoStageInstructions : "");
+        ? " " + spatialDemoStageInstructions : "") +
+      " " + authorPrivacyInstructions;
 
     let response;
     try {
