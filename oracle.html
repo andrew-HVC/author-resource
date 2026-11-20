@@ -14,6 +14,7 @@ const restart = document.getElementById("restart");
 const history = []; // Temporary memory: only in this page's JavaScript memory.
 let conversationDomain = null;  // Preserve economic/recovery/etc. intent across 6-exchange truncation.
 let modelDiscovered = false;  // Preserve explicit discovery while following either navigation route.
+let engagementShown = false; // Show exploratory cooperation invite at most once per dialogue.
 
 // Safe subset of Markdown. No innerHTML or third-party scripts.
 function appendInline(target, line) {
@@ -83,7 +84,7 @@ function displaySourceName(name) {
   return original;
 }
 
-function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища", originalQuestion = "") {
+function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища", originalQuestion = "", engagementMode = "none") {
   sources = [...new Set(sources.map(displaySourceName))];
   const placeholder = thread.querySelector(".empty");
   if (placeholder) placeholder.remove();
@@ -103,17 +104,19 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     const copy = document.createElement("button");
     copy.type = "button";
     copy.className = "copy-answer";
-    copy.textContent = "⧉ Копіювати";
+    copy.textContent = "⧉ Копіювати запит + відповідь";
+    copy.title = "Скопіювати саме це запитання разом із повною відповіддю";
     copy.setAttribute("aria-label", "Копіювати запитання та відповідь Оракула у буфер обміну");
     copy.addEventListener("click", async () => {
-      // Copy a self-contained question/answer pair, not just the reply and
-      // not unrelated earlier turns or the next-navigation suggestions.
-      const text = [
-        "Ви",
-        String(originalQuestion || "").trim(),
-        "Оракул",
-        body.innerText.trim()
-      ].filter(Boolean).join("\n\n") +
+      // Exact question and raw answer are captured in this card's closure.
+      // Neither the cleared input field nor the current conversation state
+      // can change the copied text. Keep Markdown paragraphs and bullets.
+      const matchedUserCard = card.previousElementSibling;
+      const displayedQuestion = matchedUserCard?.classList.contains("user")
+        ? matchedUserCard.querySelector(".body")?.textContent?.trim() : "";
+      const copiedQuestion = String(originalQuestion || displayedQuestion || "").trim();
+      const text = "Ви\n\n" + copiedQuestion +
+        "\n\nОракул\n\n" + String(content || "").trim() +
         (sources.length ? "\n\nДжерела: " + sources.join("; ") : "");
       try {
         await copyAnswer(text);
@@ -122,7 +125,7 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
         copy.textContent = "Не вдалося скопіювати";
       }
       window.setTimeout(() => {
-        if (copy.isConnected) copy.textContent = "⧉ Копіювати";
+        if (copy.isConnected) copy.textContent = "⧉ Копіювати запит + відповідь";
       }, 2300);
     });
     header.append(copy);
@@ -197,11 +200,15 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     link.rel = "noopener noreferrer";
     link.textContent = isDemo
       ? "Долучитися до розроблення Демонстраційної моделі"
-      : "Підготувати пропозицію співпраці або критичного розгляду";
+      : engagementMode === "exploration"
+        ? "Долучитися до обговорення або перевірки Моделі"
+        : "Підготувати пропозицію співпраці або критичного розгляду";
     const explanation = document.createElement("p");
     explanation.textContent = isDemo
       ? "Мета — спільно створити дані для оцінювання інвестиційних сценаріїв, а не інвестувати у готовий проєкт. Форма готує звернення для копіювання і не надсилає його."
-      : "Відкриється форма підготовки звернення. Вона копіює текст, але не надсилає його.";
+      : engagementMode === "exploration"
+        ? "За бажанням можна запропонувати автору дискусію, критичний розгляд або фаховий внесок. Форма лише готує текст для копіювання й не надсилає його."
+        : "Відкриється форма підготовки звернення. Вона копіює текст, але не надсилає його.";
     offer.append(link, explanation);
     card.append(offer);
   }
@@ -226,7 +233,8 @@ async function askOracle(q, route = null) {
       body: JSON.stringify({
         question: q, navigation_route: route, history: history.slice(-12),
         conversation_domain: conversationDomain,
-        model_discovered: modelDiscovered
+        model_discovered: modelDiscovered,
+        engagement_shown: engagementShown
       }),
       cache: "no-store",
       credentials: "omit",
@@ -252,13 +260,15 @@ async function askOracle(q, route = null) {
       data.engagement_offer === true,
       typeof data.engagement_focus === "string" ? data.engagement_focus : "none",
       typeof data.engagement_topic === "string" ? data.engagement_topic : "Модель середовища",
-      q);
+      q,
+      typeof data.engagement_mode === "string" ? data.engagement_mode : "none");
     // Keep reading position at the START of the new answer,
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
     if (typeof data.conversation_domain === "string")
       conversationDomain = data.conversation_domain;
     modelDiscovered = data.model_discovered === true;
+    engagementShown = engagementShown || data.engagement_offer === true;
     history.push(
       { role: "user", content: q, route: route === "conceptual" || route === "practical" ? route : null },
       { role: "assistant", content: data.answer,
@@ -266,7 +276,8 @@ async function askOracle(q, route = null) {
         // The Worker will avoid repeating questions across navigation branches.
         offered_questions: Array.isArray(data.suggestions)
           ? data.suggestions.filter(item => item && typeof item.query === "string")
-              .slice(0, 3).map(item => item.query) : [] }
+              .slice(0, 3).map(item => item.query) : [],
+        engagement_offered: data.engagement_offer === true }
     );
     if (history.length > 12) history.splice(0, history.length - 12);
     question.value = "";
@@ -311,6 +322,7 @@ restart.addEventListener("click", () => {
   history.length = 0;
   conversationDomain = null;
   modelDiscovered = false;
+  engagementShown = false;
   thread.replaceChildren();
   const placeholder = document.createElement("p");
   placeholder.className = "empty";
