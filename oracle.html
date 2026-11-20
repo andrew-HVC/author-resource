@@ -15,7 +15,7 @@ const history = []; // Temporary memory: only in this page's JavaScript memory.
 
 // Safe subset of Markdown. No innerHTML or third-party scripts.
 function appendInline(target, line) {
-  const parts = line.split(/(\\*\\*[^*]+\\*\\*)/g);
+  const parts = line.split(/(\*\*[^*]+\*\*)/g);
   for (const part of parts) {
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
       const strong = document.createElement("strong");
@@ -29,9 +29,9 @@ function appendInline(target, line) {
 
 function renderMarkdown(container, content) {
   let list = null;
-  for (const line of content.replace(/\\r/g, "").split("\\n")) {
+  for (const line of content.replace(/\r/g, "").split("\n")) {
     if (!line.trim()) { list = null; continue; }
-    const bullet = /^\\s*[-*]\\s+(.+)$/.exec(line);
+    const bullet = /^\s*[-*]\s+(.+)$/.exec(line);
     if (bullet) {
       if (!list) {
         list = document.createElement("ul");
@@ -43,7 +43,7 @@ function renderMarkdown(container, content) {
       continue;
     }
     list = null;
-    const heading = /^#{1,4}\\s+(.+)$/.exec(line);
+    const heading = /^#{1,4}\s+(.+)$/.exec(line);
     const block = document.createElement(heading ? "h3" : "p");
     appendInline(block, heading ? heading[1] : line);
     container.append(block);
