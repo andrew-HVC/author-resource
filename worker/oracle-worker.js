@@ -558,7 +558,7 @@ export default {
     const isNavigationParagraph = paragraph => {
       const p = paragraph.trim();
       return /^(?:Концептуальне|Практичне|Пов'язане|Пов’язане)\s+питання\s*[:：]/iu.test(p) ||
-        /^(?:Які|Який|Яка|Яке|Як|Чому|Чи|Що|Хто|Коли|Де|Для чого|Яким|Якою|У чому|За якими)\b/iu.test(p) &&
+        /^(?:Які|Який|Яка|Яке|Як|Чому|Чи|Що|Хто|Коли|Де|Для чого|Яким|Якою|У чому|За якими)(?:\s|$)/iu.test(p) &&
           p.length <= 220 && /\?\s*$/.test(p);
     };
     while (answerLines.length > 1 && isNavigationParagraph(answerLines[answerLines.length - 1]))
@@ -799,8 +799,9 @@ export default {
     const normalizeAtlasTerm = str => str.toLocaleLowerCase("uk")
       .replace(/^[«"']|[»"']$/g, "").replace(/\s+/g, " ").trim();
     const canonicalTerm = normalizeAtlasTerm(term);
-    const alreadyIntroduced = (answer + " " + userText)
-      .toLocaleLowerCase("uk").includes(canonicalTerm);
+    const alreadyIntroduced = [answer, question, ...history
+      .filter(x => x.role === "assistant").map(x => x.content)]
+      .join(" ").toLocaleLowerCase("uk").includes(canonicalTerm);
     if (introducedModel && term && term.length <= 60 &&
         verifiedAtlasTerms.has(canonicalTerm) && alreadyIntroduced &&
         suggestions.length === 2) {
