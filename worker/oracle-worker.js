@@ -60,27 +60,37 @@ export default {
     if (!question || question.length > 4000)
       return json({ error: "Question must contain 1–4000 characters" }, 400);
 
-    // Only the latest six exchanges are passed back to the API.
-    // The server does not keep transcripts, cookies or session IDs.
+    // Stateless progression follows chosen conceptual navigation, not turn count.
     const rawHistory = Array.isArray(body.history) ? body.history.slice(-12) : [];
-    const history = rawHistory
-      .filter(item => item &&
-        (item.role === "user" || item.role === "assistant") &&
-        typeof item.content === "string" &&
-        item.content.trim().length > 0)
-      .map(item => ({
-        role: item.role,
-        content: item.content.trim().slice(0, 2500)
+    const history = rawHistory.filter(x => x &&
+      (x.role === "user" || x.role === "assistant") &&
+      typeof x.content === "string" && x.content.trim()).map(x => ({
+        role: x.role,
+        content: x.content.trim().slice(0, 2500),
+        route: x.role === "user" && ["conceptual", "practical"].includes(x.route)
+          ? x.route : null
       }));
-
-    // A strategic first contact should not be treated as an implicit request
-    // for the author's Model. Stay at industry/strategic level until the
-    // visitor explicitly asks about alternatives or the Model.
-    const conversationText = [...history.map(item => item.content), question].join(" ");
-    const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн\w*\s+модел|кластерн\w*\s+(?:організаці|середовищ)/iu.test(conversationText);
-    const seeksAlternative = /альтернативн|принципово\s+інш|організувати\s+інакше|інш\w*\s+(?:систем\w*|підхід|організаці)/iu.test(question);
-    const strategicContext = /стратег|майбутн|перспектив|довгостроков|горизонт|відбудов/iu.test(conversationText);
-    const strategicExploration = strategicContext && !namesModel && !seeksAlternative;
+    const navigationRoute = ["conceptual", "practical"].includes(body.navigation_route)
+      ? body.navigation_route : null;
+    const userTurns = history.filter(x => x.role === "user");
+    const userText = [...userTurns.slice(-6).map(x => x.content), question].join(" ");
+    const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText);
+    // "Alternative business models" is NOT a request for the author's Model.
+    const seeksAlternative =
+      /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*|принцип[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question) ||
+      (/альтернатив[а-яіїєґ]*|інш[а-яіїєґ]*\s+принцип[а-яіїєґ]*/iu.test(question) &&
+       /територ|міст|розселен|інфраструктур|організаці|плануван|виробнич[а-яіїєґ]*\s+систем/iu.test(question));
+    const systemTopic = /відбудов|зруйнован|архітектур|територ|розселен|міст|еколог|енерг|електр|транспорт|агро|виробництв|економ|інфраструктур/iu.test(userText);
+    const selectionTrail = [...userTurns.map(x => x.route), navigationRoute];
+    let conceptualRun = 0;
+    for (let i = selectionTrail.length - 1; i >= 0 && selectionTrail[i] === "conceptual"; i--)
+      conceptualRun++;
+    // A conceptual click broadens the frame; only explicit interest in
+    // structural alternatives unlocks Model retrieval.
+    const phase = namesModel ? "model" :
+      (seeksAlternative && systemTopic) ? "alternatives" :
+      (conceptualRun >= 1 && systemTopic) ? "systems" : "open";
+    const strategicExploration = phase === "open" || phase === "systems";
 
     const modelInstructions = [
       "Ти — Оракул простору альтернативних ідей.",
@@ -213,8 +223,8 @@ export default {
       "але наступними питаннями відкрий концептуальний і прикладний рівні.",
       "Не роби обидва питання про перевірку резервів, формул і вихідних даних.",
       "Не повторюй попередні питання і не змінюй їхній реальний зміст.",
-      "Обидва питання: повні, самодостатні, зрозумілі новачку, до 150",
-      "символів, зі знаком питання; їх буде видно й надіслано дослівно.",
+      "Обидва питання обов’язкові: самодостатні, різні, до 140 символів",
+      "кожне, зі знаком питання; вони будуть надіслані дослівно.",
       "Поле related_term — лише коли є справді корисний, підтверджений",
       "у знайдених матеріалах термін, який доповнює концептуальне питання.",
       "Якщо такого терміна немає або він поведе в дрібниці, поверни null.",
@@ -265,29 +275,89 @@ export default {
     // Model corpus. It explores futures without selling a solution on turn one.
     const strategicInstructions = [
       "Ти — Оракул простору альтернативних ідей.",
-      "Допомагай досліджувати стратегічне майбутнє галузі, а не продавати концепцію.",
-      "Відвідувач цікавиться розвитком бізнесу і горизонтом змін, а не",
-      "просить презентувати конкретну Модель середовища.",
-      "Розкрий довгострокові драйвери попиту, структурні зрушення,",
-      "два-три можливі сценарії розвитку, нові ролі компаній та ризики.",
-      "Зберігай спеціалізацію і рівень управлінських рішень відвідувача.",
-      "В енергетиці розглянь зв'язки ВДЕ, накопичення, гнучкості, мереж,",
-      "виробництва, інфраструктури, розселення та надійності постачання.",
+      "Працюй на рівні запиту відвідувача, не продавай авторську концепцію.",
+      "Початковий або загальний запит не означає інтересу до Моделі середовища.",
+      "Для стратегічного запиту визнач проблему, часовий горизонт,",
+      "рушії змін, два-три сценарії, нові можливості та їхні обмеження.",
+      "Якщо відвідувач вставив чужий допис без запитання, виділи",
+      "головну проблему, обмеження постановки й два шляхи дослідження;",
+      "не обмежуйся переказом анонсу.",
+      "Для відбудови розрізняй зміну архітектури і зміну організації",
+      "територій, не прирівнюй конкурс до цілісної стратегії.",
+      "Якщо архітектор ВЖЕ сумнівається, що нові будівлі розв'яжуть",
+      "проблеми старої структури міст, НЕ переказуй цей сумнів у відповідь.",
+      "Зроби наступний інтелектуальний крок: чи є сама структура",
+      "розселення первинною, або її мають визначати природні умови,",
+      "екологічні обмеження та ресурсні спроможності території?",
+      "Поясни, що це питання про порядок формування цільової системи,",
+      "а не про вибір чергового набору критеріїв для готового міста.",
+      "Не роби відповіді просто підсумком уже висловленого сумніву.",
+      "Дай один новий причинний зв'язок та одне справді відкрите питання",
+      "про умови, що можуть визначати майбутню систему розселення.",
+      "Не закінчуй загальною вимогою координації чи участі громади:",
+      "це процедури, а не відповідь про структуру середовища.",
+      "Не нав'язуй одну відповідь: розглянь потреби людей, безпеку,",
+      "екологічні умови, ресурси й ціну зміни попередніх зв'язків.",
+      "Для вузького технічного запиту дай точну відповідь без штучного",
+      "переведення до стратегії або авторської Моделі.",
+      "У стратегічних темах поступово відкривай зв'язки виробництва,",
+      "споживання, інфраструктури, ресурсів, екологічних умов і територій.",
+      "Якщо відвідувач керує бізнесом, розглянь наслідки для його",
+      "клієнтів, операційної ролі, ризиків і бізнес-моделі.",
+      "В енергетиці розглянь зв'язки генерації, накопичення, гнучкості,",
+      "мереж, виробництва, інфраструктури й надійності постачання.",
       "Не називай непідтверджені прогнози чи бізнес-ефекти доведеними фактами.",
       "Не вигадуй свіжі ринкові ціни, закони чи статистику без джерел.",
-      "Не пропонуй у цій відповіді Модель середовища, її епістеми,",
-      "Демонстраційну модель, інвестиційні об'єкти автора або участь у них.",
-      "conceptual_question має відкривати ширшу стратегічну трансформацію",
-      "і взаємні впливи галузі на економіку та території.",
-      "practical_question має розглядати наслідки сценаріїв для бізнес-моделі,",
-      "капіталовкладень і довгострокових ризиків без готових рекомендацій.",
-      "Ці запитання формулюй повністю, до 150 символів, із знаком питання.",
+      "На цій стадії НЕ називай Модель середовища, її матеріали, епістеми,",
+      "Демонстраційну модель, авторські інвестиційні об'єкти або участь у них.",
+      "Не вставляй презентацію авторської Моделі як додатковий абзац:",
+      "її слід відкривати лише за змістовним запитом на конкретну альтернативу.",
+      "conceptual_question веде на один рівень глибше: від галузевих",
+      "сценаріїв до взаємозв'язків і принципів організації систем.",
+      "За наявності інтересу до цих зв'язків запитай про можливі інші",
+      "принципи організації без назви авторської Моделі.",
+      "Не перескакуй одразу до презентації конкретної концепції.",
+      "practical_question має відкривати наслідки сценаріїв для діяльності,",
+      "клієнтських потреб, бізнес-моделі, ресурсів і довгострокових ризиків.",
+      "У відбудові практичний шлях стосується наслідків різних систем",
+      "розселення: для забезпечення енергією, ресурсів, інфраструктури,",
+      "безпеки та повсякденного життя, а не кошторису однієї будівлі.",
+      "Завжди створюй ОБИДВА різні питання, кожне до 140 символів.",
+      "Якщо якесь довше, скороти його; не залишай поле порожнім.",
       "Не повторюй уже дану відповідь; відповідь мовою відвідувача.",
       "Дай змістовну відповідь приблизно 120–220 слів.",
       "Поверни engagement_offer=false, engagement_focus=none, related_term=null.",
       "Зберігай відкритість до інших поглядів; не приписуй мотивів користувачу."
     ].join(" ");
-    const instructions = strategicExploration ? strategicInstructions : modelInstructions;
+
+    const systemsInstructions = strategicInstructions + " " + [
+      "Відвідувач сам обрав концептуальне поглиблення.",
+      "Не обмежуйся архітектурою будівель, кварталами, участю громади",
+      "або локальними критеріями проєктування.",
+      "Розглянь організацію території чи системи як цілого: екологічні",
+      "обмеження, енергетику, виробництво, інфраструктуру, потреби людей.",
+      "Для відбудови переведи пошук з архітектури і кварталів на",
+      "порядок формування цілісної територіальної системи.",
+      "Спочатку природні й екологічні умови, далі їхній зв'язок",
+      "з енергетичним потенціалом, інфраструктурою, виробництвом",
+      "і зрештою можливими конфігураціями розселення.",
+      "Це послідовність для дослідження, а не доведена єдина схема.",
+      "Запропонуй питання про альтернативні принципи системної організації.",
+      "Не називай авторську Модель, поки відвідувач не обере альтернативи."
+    ].join(" ");
+    const alternativeInstructions = modelInstructions + " " + [
+      "Відвідувач обрав дослідження системних альтернатив.",
+      "Порівняй відновлення попередньої структури з іншими принципами.",
+      "Якщо матеріали підтверджують відповідність, представ Модель",
+      "середовища як одну авторську альтернативу: її взаємозв'язки,",
+      "межі, неперевірені твердження і способи критичної перевірки.",
+      "Не перетворюй відповідь на рекламу чи запрошення до участі.",
+      "Для відбудови розрізняй архітектуру будівель та екологічну,",
+      "енергетичну, виробничу, інфраструктурну, соціальну організацію."
+    ].join(" ");
+    const instructions = phase === "model" ? modelInstructions :
+      phase === "alternatives" ? alternativeInstructions :
+      phase === "systems" ? systemsInstructions : strategicInstructions;
 
     let response;
     try {
@@ -300,14 +370,15 @@ export default {
         body: JSON.stringify({
           model: "gpt-6-luna",
           instructions,
-          input: [...history, { role: "user", content: question }],
+          input: [...history.map(x => ({ role: x.role, content: x.content })),
+            { role: "user", content: question }],
           ...(strategicExploration ? {} : {
             tools: [{
               type: "file_search",
               vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
               max_num_results: 8
             }],
-            tool_choice: "auto"
+            tool_choice: phase === "alternatives" ? "required" : "auto"
           }),
           reasoning: { effort: "low" },
           text: {
@@ -406,20 +477,134 @@ export default {
     const introducedModel = !strategicExploration &&
       /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїє]*\s+модел/i.test(answer);
 
-    // Structured navigation: a conceptual question and a practical-effects
-    // question, both generated in this same model call (no extra API call).
-    const seen = new Set([question.toLocaleLowerCase("uk")]);
+    // The model may omit, duplicate or overrun a question. Never silently
+    // remove one of the two navigation paths: supply a relevant fallback.
+    // Prevent verbatim recycling of previously clicked questions as new chips.
+    const seen = new Set([...userTurns.map(x => x.content), question]
+      .map(x => x.toLocaleLowerCase("uk").replace(/\s+/g, " ").trim()));
     const suggestions = [];
-    const addQuestion = text => {
-      if (typeof text !== "string") return;
-      const q = text.trim().replace(/\s+/g, " ");
+    const addQuestion = (value, route = "practical") => {
+      if (typeof value !== "string") return false;
+      const q = value.trim().replace(/\s+/g, " ");
       const key = q.toLocaleLowerCase("uk");
-      if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key)) return;
+      if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key)) return false;
       seen.add(key);
-      suggestions.push({ kind: "question", label: q, query: q });
+      suggestions.push({ kind: "question", route, label: q, query: q });
+      return true;
     };
-    addQuestion(parsed?.conceptual_question);
-    addQuestion(parsed?.practical_question);
+    const topicText = userText.toLocaleLowerCase("uk");
+    const topic = /відбудов|зруйнован|архітектур|повоєнн/.test(topicText) ? "recovery" :
+      /енерг|електр|генерац|накопич|потужн/.test(topicText) ? "energy"
+      : /транспорт|логіст|перевез/.test(topicText) ? "transport"
+      : /агро|зерн|врожай|сільськ/.test(topicText) ? "agriculture"
+      : /територ|міст|простор|розселен/.test(topicText) ? "territory"
+      : /економ|бізнес|ринк|інвест/.test(topicText) ? "economy" : "general";
+    const fallbacks = {
+      recovery: [
+        ["Як зміниться логіка відбудови, якщо спочатку дослідити екологічні та ресурсні можливості території?",
+         "Чи мають природні умови та ресурсні обмеження впливати на майбутню структуру розселення ще до проєктування будівель?"],
+        ["За якими критеріями порівнювати відновлення зруйнованих міст і зміну самої структури розселення?",
+         "Як порівняти ресурсні потреби різних сценаріїв відбудови?"]
+      ],
+      energy: [
+        ["Як зміниться організація енергетики, виробництва та інфраструктури за поглиблення їхньої взаємозалежності?",
+         "Як потреби територій змінюють принципи проєктування енергетичних систем?"],
+        ["Які партнерства й компетенції потрібні енергокомпанії для спільних проєктів із виробництвом та інфраструктурою?",
+         "Як енергокомпанії оцінювати нові джерела доходів і ризики інтегрованих послуг?"]
+      ],
+      transport: [
+        ["Як нові транспортні системи можуть змінити організацію виробництва й територій?",
+         "Які принципи взаємодії транспорту, виробництва й інфраструктури можуть змінитися?"],
+        ["Які нові можливості й ризики це створює для операторів транспорту?",
+         "Що потрібно перевірити перед інвестиціями в нові транспортні рішення?"]
+      ],
+      agriculture: [
+        ["Як можуть змінитися взаємозв'язки агровиробництва, екології, енергетики та територій?",
+         "Які принципи організації агровиробництва змінює автоматизація?"],
+        ["Які нові виробничі можливості відкриваються перед агропідприємствами?",
+         "Які ресурси й ризики потрібно врахувати під час зміни агровиробництва?"]
+      ],
+      territory: [
+        ["Як взаємозалежність екології, енергетики й інфраструктури змінює організацію територій?",
+         "Які принципи організації територій можуть змінитися в наступні десятиліття?"],
+        ["Які практичні наслідки матимуть ці зміни для людей і підприємств?",
+         "За якими критеріями порівнювати сценарії розвитку територій?"]
+      ],
+      economy: [
+        ["Як разом зі структурою виробництва та потреб змінюються економічні відносини?",
+         "Які системні зміни можуть вплинути на довгострокову роль підприємств?"],
+        ["Які нові потреби клієнтів можуть визначити перспективні напрями бізнесу?",
+         "Як порівняти ризики й можливості різних сценаріїв розвитку бізнесу?"]
+      ],
+      general: [
+        ["Які взаємозв'язки між системами найбільше змінюють наше уявлення про майбутнє?",
+         "Які принципово нові підходи можуть виникнути на перетині галузей?"],
+        ["Які практичні можливості й ризики відкриваються за різних сценаріїв змін?",
+         "За якими ознаками порівнювати можливі шляхи розвитку?"]
+      ]
+    };
+    // Keep fallback language consistent with the visitor's question.
+    const english = /[a-z]{3}/i.test(question) && !/[а-яіїєґ]/i.test(question);
+    const russian = /[ыэъё]/i.test(question) && !/[іїєґ]/i.test(question);
+    const routes = english ? [
+      ["How could the relationship between production, infrastructure, and resources change this field?",
+       "What new principles could reshape the way these systems are organized?"],
+      ["Which new partnerships and capabilities might create opportunities for your organization?",
+       "What practical risks and trade-offs should be assessed before choosing a development path?"]
+    ] : russian ? [
+      ["Как связи между производством, инфраструктурой и ресурсами изменят развитие этой отрасли?",
+       "Какие новые принципы могут изменить организацию взаимосвязанных систем?"],
+      ["Какие новые компетенции и партнёрства могут понадобиться вашей организации?",
+       "Какие риски следует проверить перед выбором пути развития?"]
+    ] : fallbacks[topic];
+    const activeRoutes = namesModel ? [
+      [
+        "Як пов'язані між собою основні принципи Моделі середовища?",
+        "Які системні взаємозв'язки визначають архітектуру Моделі середовища?"
+      ],
+      [
+        "Які твердження Моделі середовища потрібно перевірити першочергово?",
+        "Які дані потрібні для перевірки ключових рішень Моделі середовища?"
+      ]
+    ] : routes;
+    // A conceptual route must gain altitude. An initial building-level
+    // discussion becomes a system-level question; the next opt-in choice
+    // explicitly opens structural alternatives without naming the Model yet.
+    const conceptualNext = phase === "open" && topic === "recovery"
+      ? "Як зміниться логіка відбудови, якщо спочатку дослідити екологічні та ресурсні можливості території?"
+      : phase === "systems" && topic === "recovery"
+      ? "Які альтернативні принципи організації територій випливають з екологічних, енергетичних та ресурсних умов?"
+      : phase === "open" && topic === "energy"
+      ? "Чи може природний енергетичний потенціал території визначати розміщення виробництва й інфраструктури?"
+      : phase === "systems" && topic === "energy"
+      ? "Які альтернативні принципи організації енергетичних систем і виробництва варто порівняти?"
+      : phase === "alternatives" && topic === "recovery"
+      ? "Чим Модель середовища відрізняється від відбудови попередньої структури міст і поселень?"
+      : phase === "alternatives" && topic === "energy"
+      ? "Як Модель середовища змінює роль енергетики в організації виробництва та територій?"
+      : phase === "model" && topic === "recovery"
+      ? "Як у Моделі середовища екологічні умови визначають енергетику, інфраструктуру й розселення?"
+      : null;
+    const practicalNext = phase === "open" && topic === "recovery"
+      ? "Як різні принципи розселення змінять потреби громад в енергії, інфраструктурі, ресурсах і безпеці?"
+      : phase === "systems" && topic === "recovery"
+      ? "Які наслідки для транспорту, енергетики та життєзабезпечення матиме інша організація територій?"
+      : phase === "alternatives" && topic === "recovery"
+      ? "Які екологічні, енергетичні та соціальні наслідки Моделі середовища потрібно перевірити насамперед?"
+      : phase === "alternatives" && topic === "energy"
+      ? "Які ризики та можливі переваги альтернативної енергетичної організації потрібно перевірити?"
+      : null;
+    const addRoute = (candidate, alternatives, route) => {
+      if (addQuestion(candidate, route)) return;
+      for (const option of alternatives) {
+        if (addQuestion(option, route)) return;
+      }
+    };
+    if (parsed) {
+      // Conceptual breadth first, practical consequences second.
+      addRoute(conceptualNext || parsed.conceptual_question, activeRoutes[0], "conceptual");
+      addRoute(practicalNext || parsed.practical_question, activeRoutes[1], "practical");
+    }
 
     // A precise source-backed term can be offered as an optional third question.
     const term = typeof parsed?.related_term === "string"
