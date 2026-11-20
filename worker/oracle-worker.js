@@ -1564,13 +1564,15 @@ export default {
       const staysOnTopic = q => {
         // A general primer on capitalism/socialism misses the visitor's
         // inquiry into the author's concrete socio-economic architecture.
-        if (phase === "model" && asksSocioPoliticalClassification &&
+        if (phase === "model" &&
+          (asksSocioPoliticalClassification || asksCoercionRisk) &&
           /капіталізм|соціалізм|капіталістичн|соціалістичн/iu.test(q) &&
           !/Модел[ьяіюі]?\s+середовищ|кластер|приватн[а-яіїєґ]*\s+контур|спільн[а-яіїєґ]*\s+норм/iu.test(q))
           return false;
         // An abstract entitlement to exit all digital systems is not
         // established in the canonical Model; avoid presenting it as given.
-        if (phase === "model" && asksCoercionRisk &&
+        if (phase === "model" &&
+          (asksCoercionRisk || asksSocioPoliticalClassification) &&
           /відмов[а-яіїєґ]*\s+від\s+цифров[а-яіїєґ]*\s+участ|прав[а-яіїєґ]*\s+на\s+(?:повн[а-яіїєґ]*\s+)?вихід\s+із\s+систем/iu.test(q))
           return false;
         // MС-080 requires evaluation of both the object's functioning and
