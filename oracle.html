@@ -16,6 +16,7 @@ const history = []; // Temporary memory: only in this page's JavaScript memory.
 let conversationDomain = null;  // Preserve economic/recovery/etc. intent across 6-exchange truncation.
 let modelDiscovered = false;  // Preserve explicit discovery while following either navigation route.
 let engagementShown = false; // Show exploratory cooperation invite at most once per dialogue.
+let demoEngagementShown = false; // A generic prior invitation does not replace a Demo-specific one.
 const offeredIssueKeys = new Set(); // Do not repeat a reconciliation invitation for the same source pair.
 
 // Safe subset of Markdown. No innerHTML or third-party scripts.
@@ -206,7 +207,7 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     const issueContext = isSourceIssue
       ? (displayIssueRefs.length ? displayIssueRefs.join(" і ") : "Матеріали Моделі") +
         ": " + sourceIssue.subject.slice(0, 160) : "";
-    const isDemo = engagementFocus === "demo" && !isSourceIssue;
+    const isDemo = (engagementFocus === "demo" || engagementMode === "demo") && !isSourceIssue;
     link.href = "./?topic=" + encodeURIComponent(engagementTopic) +
       "&intent=" + encodeURIComponent(isDemo
         ? "Ініціатива розроблення" : "Професійна дискусія") +
@@ -228,7 +229,7 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
         (displayIssueRefs.length ? displayIssueRefs.join(" та ") : "авторських документів") +
         ". Можна запропонувати аргументи або редакцію для розгляду автором. Форма готує текст для копіювання і не надсилає його."
       : isDemo
-        ? "Мета — спільно створити дані для оцінювання інвестиційних сценаріїв, а не інвестувати у готовий проєкт. Форма готує звернення для копіювання і не надсилає його."
+        ? "Можлива участь у передпроєктній підготовці та створенні цифрової Демонстраційної моделі: дані, просторові й інженерні рішення, розрахунки, моделювання та критична перевірка. Це ще не натурний пілот. Форма готує звернення для копіювання і не надсилає його."
         : engagementMode === "exploration"
           ? "За бажанням можна запропонувати автору дискусію, критичний розгляд або фаховий внесок. Форма лише готує текст для копіювання й не надсилає його."
           : "Відкриється форма підготовки звернення. Вона копіює текст, але не надсилає його.";
@@ -259,6 +260,7 @@ async function askOracle(q, route = null) {
         conversation_domain: conversationDomain,
         model_discovered: modelDiscovered,
         engagement_shown: engagementShown,
+        demo_engagement_shown: demoEngagementShown,
         source_issue_keys: [...offeredIssueKeys].slice(-40),
         contextual_followup: route === null && history.length > 0
       }),
@@ -296,6 +298,7 @@ async function askOracle(q, route = null) {
       conversationDomain = data.conversation_domain;
     modelDiscovered = data.model_discovered === true;
     engagementShown = engagementShown || data.engagement_offer === true;
+    demoEngagementShown = demoEngagementShown || data.demo_engagement_offered === true;
     if (data.engagement_mode === "source_issue" &&
         typeof data.source_issue_key === "string" && data.source_issue_key)
       offeredIssueKeys.add(data.source_issue_key);
@@ -308,6 +311,7 @@ async function askOracle(q, route = null) {
           ? data.suggestions.filter(item => item && typeof item.query === "string")
               .slice(0, 3).map(item => item.query) : [],
         engagement_offered: data.engagement_offer === true,
+        demo_engagement_offered: data.demo_engagement_offered === true,
         source_issue_key: typeof data.source_issue_key === "string" ?
           data.source_issue_key : "" }
     );
@@ -358,6 +362,7 @@ restart.addEventListener("click", () => {
   conversationDomain = null;
   modelDiscovered = false;
   engagementShown = false;
+  demoEngagementShown = false;
   offeredIssueKeys.clear();
   thread.replaceChildren();
   const placeholder = document.createElement("p");
