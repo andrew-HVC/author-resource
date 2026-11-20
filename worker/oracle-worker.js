@@ -68,13 +68,20 @@ export default {
         role: x.role,
         content: x.content.trim().slice(0, 2500),
         route: x.role === "user" && ["conceptual", "practical"].includes(x.route)
-          ? x.route : null
+          ? x.route : null,
+        offered_questions: x.role === "assistant" && Array.isArray(x.offered_questions)
+          ? x.offered_questions.filter(q => typeof q === "string")
+              .slice(0, 3).map(q => q.trim().slice(0, 150)) : []
       }));
     const navigationRoute = ["conceptual", "practical"].includes(body.navigation_route)
       ? body.navigation_route : null;
     const userTurns = history.filter(x => x.role === "user");
     const userText = [...userTurns.slice(-6).map(x => x.content), question].join(" ");
-    const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText);
+    // Direct references to numbered episteme/Atlas entries and distinctive
+    // named concepts are requests about the author's Model even when the
+    // visitor does not literally type "Модель середовища".
+    const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText) ||
+      /\b(?:МС|АТ)[-–—]\s*\d{3}\b|фрактальн[а-яіїєґ]*\s+економік/iu.test(question);
     // "Alternative business models" is NOT a request for the author's Model.
     const seeksAlternative =
       /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*|принцип[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question) ||
@@ -436,7 +443,15 @@ export default {
       "економічний облік — АТ-183. Якщо хочеш запропонувати запитання",
       "з такою назвою, коротко введи її в основній відповіді.",
       "Не переходь до узагальнених питань про всю Модель після",
-      "вузької економічної теми: поглиблюй саме економічні зв'язки."
+      "вузької економічної теми: поглиблюй саме економічні зв'язки.",
+      "Після пояснення структурних вимірів і виробничих ланцюгів",
+      "наступне концептуальне питання має досліджувати принципи",
+      "узгодження потреб, спроможностей, вартості та економічного обліку.",
+      "Практична гілка продовжує оцінку економічних взаємозалежностей",
+      "і наслідків для учасників, а НЕ перетворюється на маркетингову",
+      "пораду про перспективні напрями бізнесу чи пошук клієнтів.",
+      "Зважай на вже дані відповіді та не пропонуй повторення їхніх",
+      "питань навіть якщо користувач раніше не натискав плашку."
     ].join(" ");
     const asksThreeDimensions = domain === "economy" &&
       /(?:три|трьох|трьома)\s+(?:взаємопов[’']язан[а-яіїєґ]*\s+)?вимір|вимір[а-яіїєґ]*\s+(?:структурн[а-яіїєґ]*\s+)?ускладнен/iu.test(question);
@@ -607,8 +622,13 @@ export default {
     // The model may omit, duplicate or overrun a question. Never silently
     // remove one of the two navigation paths: supply a relevant fallback.
     // Prevent verbatim recycling of previously clicked questions as new chips.
-    const seen = new Set([...userTurns.map(x => x.content), question]
-      .map(x => x.toLocaleLowerCase("uk").replace(/\s+/g, " ").trim()));
+    // Include questions *offered* on earlier cards, not only questions clicked.
+    const seen = new Set([
+      ...userTurns.map(x => x.content),
+      ...history.filter(x => x.role === "assistant")
+        .flatMap(x => x.offered_questions),
+      question
+    ].map(x => x.toLocaleLowerCase("uk").replace(/\s+/g, " ").trim()));
     const suggestions = [];
     const addQuestion = (value, route = "practical") => {
       if (typeof value !== "string") return false;
@@ -658,10 +678,10 @@ export default {
          "За якими критеріями порівнювати сценарії розвитку територій?"]
       ],
       economy: [
-        ["Як разом зі структурою виробництва та потреб змінюються економічні відносини?",
-         "Які системні зміни можуть вплинути на довгострокову роль підприємств?"],
-        ["Які нові потреби клієнтів можуть визначити перспективні напрями бізнесу?",
-         "Як порівняти ризики й можливості різних сценаріїв розвитку бізнесу?"]
+        ["Як нові потреби, продуктивні спроможності та внески учасників змінюють правила економічної координації?",
+         "Що змінюється у формуванні вартості, коли виробничі ланцюги взаємно залежать один від одного?"],
+        ["Які дані потрібні, щоб простежити економічні наслідки взаємних змін попиту і пропозиції?",
+         "Як оцінити дефіцити спроможностей і розподіл результатів між учасниками виробничого ланцюга?"]
       ],
       general: [
         ["Які взаємозв'язки між системами найбільше змінюють наше уявлення про майбутнє?",
@@ -686,12 +706,12 @@ export default {
     ] : fallbacks[topic];
     const activeRoutes = namesModel && topic === "economy" ? [
       [
-        "Які відмінності фрактальної економіки від економіки капіталу описано в Моделі середовища?",
-        "Як у Моделі середовища розрізняються потреби, дефіцити та продуктивні спроможності?"
+        "Які правила узгодження потреб, створення спроможностей та формування вартості пропонує Модель середовища?",
+        "Як змінюється економічна координація, якщо результат простежується через весь виробничий ланцюг?"
       ],
       [
-        "Як перевірити двосторонній вплив нових потреб і продуктивних спроможностей?",
-        "Які показники дають змогу оцінити структурне ускладнення економічних взаємодій?"
+        "Які економічні події та внески потрібно зафіксувати для перевірки альтернативного обліку?",
+        "Як перевірити вплив нового механізму обліку на дефіцити та розподіл результатів?"
       ]
     ] : namesModel ? [
       [
@@ -713,11 +733,7 @@ export default {
       : phase === "alternatives" && topic === "economy"
       ? "Чим економічні механізми Моделі середовища відрізняються від оптимізації наявних ринкових відносин?"
       : phase === "model" && topic === "economy"
-      ? (/фрактальн[а-яіїєґ]*\s+економік/iu.test(question)
-          ? "Як економічне ускладнення нових потреб і продуктивних спроможностей впливає на формування вартості?"
-          : /фрактальн[а-яіїєґ]*\s+економік/iu.test(answer + " " + userText)
-            ? "Як фрактальна економіка пов'язує появу нових потреб, ускладнення виробництва та взаємні впливи?"
-            : "Якими механізмами можна відображати взаємне ускладнення потреб, виробництва й економічних зв'язків?")
+      ? null // Use a question grounded in the latest answer; fallbacks stay at system scale.
       : phase === "open" && topic === "recovery"
       ? "Як зміниться логіка відбудови, якщо спочатку дослідити екологічні та ресурсні можливості території?"
       : phase === "systems" && topic === "recovery"
@@ -812,9 +828,13 @@ export default {
       ]
     };
     const addRoute = (candidate, alternatives, route) => {
-      if (addQuestion(candidate, route)) return;
-      for (const option of [...alternatives, ...extendedRoutes[route]]) {
-        if (addQuestion(option, route)) return;
+      const staysOnTopic = q => {
+        if (topic !== "economy" || phase !== "model") return true;
+        return !/нов[а-яіїєґ]*\s+потреб[а-яіїєґ]*\s+клієнт|перспективн[а-яіїєґ]*\s+напрям[а-яіїєґ]*\s+бізнес|залученн[а-яіїєґ]*\s+клієнт|збільшенн[а-яіїєґ]*\s+продаж/iu.test(q);
+      };
+      for (const q of [candidate, ...alternatives, ...extendedRoutes[route]]) {
+        if (typeof q === "string" && staysOnTopic(q) && addQuestion(q, route))
+          return;
       }
     };
     if (parsed) {
