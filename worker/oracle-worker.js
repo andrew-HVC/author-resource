@@ -1382,14 +1382,14 @@ export default {
     // question; source retrieval can otherwise return only a general method.
     if (asksStrategyOfInfluence) {
       const orderedLevels = [
-        /екологічн[а-яіїєґ]*\s+каркас/iu,
-        /енергетичн[а-яіїєґ]*\s+(?:систем|архітектур)/iu,
-        /лінійн[а-яіїєґ]*\s+інфраструктурн[а-яіїєґ]*\s+каркас/iu,
-        /єдин[а-яіїєґ]*\s+типологічн[а-яіїєґ]*\s+об['’ʼ]єм/iu,
-        /біотехнологічн[а-яіїєґ]*\s+комплекс/iu,
-        /несуч[а-яіїєґ]*\s+здатн/iu,
-        /кластер/iu,
-        /соціально[-–]?адміністративн[а-яіїєґ]*\s+формаці/iu
+        /екологічн[а-яіїєґ]*\s+каркас[а-яіїєґ]*/iu,
+        /енергетичн[а-яіїєґ]*\s+(?:систем|архітектур)[а-яіїєґ]*/iu,
+        /лінійн[а-яіїєґ]*\s+інфраструктурн[а-яіїєґ]*\s+каркас[а-яіїєґ]*/iu,
+        /єдин[а-яіїєґ]*\s+типологічн[а-яіїєґ]*\s+об['’ʼ]єм[а-яіїєґ]*/iu,
+        /біотехнологічн[а-яіїєґ]*\s+комплекс[а-яіїєґ]*/iu,
+        /несуч[а-яіїєґ]*\s+здатн[а-яіїєґ]*/iu,
+        /кластер[а-яіїєґ]*/iu,
+        /соціально[-–]?адміністративн[а-яіїєґ]*\s+формаці[а-яіїєґ]*/iu
       ];
       let cursor = 0;
       const hasFullHierarchy = orderedLevels.every(pattern => {
@@ -1398,7 +1398,14 @@ export default {
         cursor += m.index + m[0].length;
         return true;
       });
-      if (!hasFullHierarchy) {
+      const hasPerLevelReasons = orderedLevels.every(pattern => {
+        const m = pattern.exec(answer);
+        if (!m) return false;
+        const tail = answer.slice(m.index + m[0].length).split("\n")[0].trim();
+        return /^[—–:-]\s*/u.test(tail) && tail.length >= 34 &&
+          /визнач|форм|умов|меж|можливост|залеж|розрах|спираєт|виплива|забезпеч|встанов/iu.test(tail);
+      });
+      if (!hasFullHierarchy || !hasPerLevelReasons) {
         const canonicalHierarchy = [
           "**Чинна ієрархія визначальних впливів у просторовому контурі Моделі середовища:**",
           "- **Екологічний каркас** — на основі природних умов визначає межі антропогенного втручання й просторові обмеження.",
