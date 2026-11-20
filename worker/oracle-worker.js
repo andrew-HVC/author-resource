@@ -90,14 +90,24 @@ export default {
       "Відповідай спочатку коротко і змістовно: зазвичай 120–220 слів,",
       "для складного запиту максимум приблизно 300 слів; не обривай речення.",
       "Не втрачай суттєвих застережень заради стислості.",
-      "В окремому полі suggestions запропонуй 2 або 3 доречні продовження:",
-      "одне чи два змістовні запитання (kind question) та за наявності",
-      "підтверджений корпусом пов’язаний термін (kind term).",
-      "Кожна suggestion має короткий label та самодостатній query,",
-      "який користувач міг би поставити як наступне питання.",
-      "Для терміна сформуй query на кшталт 'Поясни термін «...» у контексті Моделі середовища'.",
-      "Не пропонуй вигаданих епістем або неіснуючих документів.",
-      "Плашки продовження — не окрема відповідь, а навігація до наступного запиту."
+      "В окремому полі suggestions запропонуй 2–3 природні продовження діалогу.",
+      "У suggestions кожен об'єкт має лише kind та text.",
+      "Якщо kind=question, text — ПОВНЕ, конкретне, самодостатнє запитання",
+      "до 130 символів, яке дослівно побачить та поставить відвідувач.",
+      "Не створюй коротку назву з іншим, ширшим чи вужчим прихованим питанням.",
+      "Якщо kind=term, text — точна назва поняття з корпусу до 60 символів.",
+      "Для новачка формулюй зрозуміло, без невідомих абревіатур і зайвого жаргону.",
+      "Підбирай лише безпосередньо пов'язані теми; вони мають розвивати",
+      "поточний предмет і не повторювати вже дану відповідь.",
+      "По можливості запропонуй альтернативні шляхи: поглиблення пояснення,",
+      "порівняння із чинними підходами чи критичне питання, а також термін.",
+      "Не спрямовуй усі запитання примусово до Моделі середовища.",
+      "Коли питають про економіку, лишайся в економічному предметі;",
+      "не підмінюй економічне порівняння питанням територіального планування.",
+      "Модель середовища — цілісна система, а не лише просторова модель.",
+      "Не вигадуй епістем чи неіснуючих документів; не пропонуй",
+      "термінів, у наявності яких у корпусі ти не впевнений.",
+      "Плашки — лише навігація до наступної відповіді, а не окрема відповідь."
     ].join(" ");
 
     let response;
@@ -136,10 +146,9 @@ export default {
                       additionalProperties: false,
                       properties: {
                         kind: { type: "string", enum: ["question", "term"] },
-                        label: { type: "string" },
-                        query: { type: "string" }
+                        text: { type: "string" }
                       },
-                      required: ["kind", "label", "query"]
+                      required: ["kind", "text"]
                     }
                   }
                 },
@@ -201,19 +210,26 @@ export default {
       .replace(/\uE200filecite\uE202[\s\S]*?\uE201/g, "")
       .trim();
 
+    // No more mismatched labels and hidden queries.
+    // A question chip displays exactly the question that it sends.
+    // A term chip shows its name; the backend constructs its explanation query.
     const seen = new Set();
     const suggestions = (Array.isArray(parsed?.suggestions)
       ? parsed.suggestions : [])
       .filter(s => s && (s.kind === "question" || s.kind === "term") &&
-        typeof s.label === "string" && typeof s.query === "string")
-      .map(s => ({
-        kind: s.kind,
-        label: s.label.trim().slice(0, 72),
-        query: s.query.trim().slice(0, 350)
-      }))
+        typeof s.text === "string")
+      .map(s => ({ kind: s.kind, text: s.text.trim().replace(/\s+/g, " ") }))
+      .filter(s => s.text && s.text.length <= (s.kind === "term" ? 60 : 130))
+      .map(s => {
+        const query = s.kind === "question"
+          ? s.text
+          : "Що означає термін «" + s.text + "» у контексті Моделі середовища?";
+        return { kind: s.kind, label: s.text, query };
+      })
       .filter(s => {
-        const key = s.query.toLowerCase();
-        if (!s.label || !s.query || key === question.toLowerCase() || seen.has(key))
+        const key = s.query.toLocaleLowerCase("uk");
+        if ((s.kind === "question" && !s.query.endsWith("?")) ||
+            key === question.toLocaleLowerCase("uk") || seen.has(key))
           return false;
         seen.add(key);
         return true;
