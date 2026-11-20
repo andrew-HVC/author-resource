@@ -190,10 +190,22 @@ function publicReferenceName(id) {
   return "«" + title + "» (" + (id.startsWith("АТ-") ? "Атлас термінів" : "епістема") + ")";
 }
 function publicReferenceText(value) {
-  return String(value || "").replace(/(?:АТ|МС)[-–—]\s*\d{3}/gu, token => {
-    const normalized = token.replace(/[–—]/g, "-").replace(/\s+/g, "");
-    return publicReferenceName(normalized) || token;
-  });
+  return String(value || "").replace(/(?:АТ|МС)[-–—]\s*\d{3}/gu,
+    (token, offset, fullText) => {
+      const normalized = token.replace(/[–—]/g, "-").replace(/\s+/g, "");
+      const title = REFERENCE_TITLES[normalized];
+      if (!title) return token;
+      const prior = fullText.slice(Math.max(0, offset - 55), offset);
+      // Avoid "в Атласі термінів «...» (Атлас термінів)"
+      // or "в епістемі «...» (епістема)" when document type is clear.
+      if (normalized.startsWith("АТ-") &&
+          /(?:Атлас[іу]|термінологічн[а-яіїєґ]*\s+картц[і])\s+(?:термінів\s+)?$/iu.test(prior))
+        return "«" + title + "»";
+      if (normalized.startsWith("МС-") &&
+          /епістем[іау]\s*$/iu.test(prior))
+        return "«" + title + "»";
+      return publicReferenceName(normalized);
+    });
 }
 
 export default {
