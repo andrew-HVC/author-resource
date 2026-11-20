@@ -85,10 +85,15 @@ export default {
     // "у Моделі середовища?", even if the full title is omitted.
     // Don't match ordinary "у моделі розвитку" or "бізнес-моделі".
     const shorthandModel = /(?:^|[\s(«])(?:у|в|про|щодо|для)\s+[Мм]одел[іьюя](?=\s*[?!.,;:]|\s*$)/u.test(question);
+    // This site is the author's Model resource: a visitor's reference to
+    // "ви говорите про цілісну організацію середовища" is a direct question
+    // about the author's proposal, even without its formal title.
+    const authorModelAllusion =
+      /ви\s+(?:говорите|пишете|стверджуєте)\s+про\s+цілісн[а-яіїєґ]*\s+організаці[а-яіїєґ]*\s+середовищ/iu.test(question);
     const directModelInquiry =
       /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(question) ||
       /(?:МС|АТ)[-–—]\s*\d{3}\b|фрактальн[а-яіїєґ]*\s+економік/iu.test(question) ||
-      shorthandModel;
+      shorthandModel || authorModelAllusion;
     const namesModel = directModelInquiry ||
       (body.model_discovered === true &&
        /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText));
@@ -133,11 +138,15 @@ export default {
     // Only an explicit switch of topic should leave that context.
     const contextualFreeform = body.contextual_followup === true &&
       navigationRoute === null && userTurns.length > 0;
+    const asksWhoGoverns =
+      /(?:хто|ким).{0,90}(?:встанов|визнач|затвердж|ухвал).{0,90}(?:правил|норм)|(?:керуюч[а-яіїєґ]*\s+норм|правил[а-яіїєґ]*\s+житт|рішенн[а-яіїєґ]*\s+громад|цифров[а-яіїєґ]*\s+(?:копі|систем).{0,65}(?:правил|норм|рішенн))/iu.test(question);
     const changesTopic =
       /(?:^|[.!?]\s*)(?:а\s+)?(?:тепер\s+)?(?:інш[аеи]\s+тема|нов[ае]\s+тема|інш[ае]\s+питання|змінимо\s+тему|змінімо\s+тему|перейдемо\s+до\s+інш|не\s+про\s+(?:цю\s+)?модел)/iu.test(question) ||
       /^(?:а\s+)?тепер\s+(?:поговорімо|поговоримо)\s+про\s+інш/iu.test(question);
     const explicitNewTopic = contextualFreeform && changesTopic && !directModelInquiry;
     if (explicitNewTopic) domain = inferDomain(question);
+    else if ((directModelInquiry || modelDiscovered) && asksWhoGoverns)
+      domain = "social";
     const selectedModelFollowup = modelDiscovered &&
       (navigationRoute !== null || (contextualFreeform && !changesTopic)) &&
       !/не\s+(?:згадуй|називай|обговорюй)\s+модел/iu.test(question);
@@ -522,6 +531,7 @@ export default {
       "попит, пропозицію та їхні взаємні впливи, а не через дефіцити."
     ].join(" ");
     const needsCanonicalSearch = directModelInquiry ||
+      (phase === "model" && asksWhoGoverns) ||
       /атлас[а-яіїєґ]*\s+термін|(?:АТ|МС)[-–—]\s*\d{3}|\bтермін[ауиів]?\b|визначенн[яею]|епістем[а-яіїєґ]*/iu.test(question) ||
       asksThreeDimensions;
     const openSocialInstructions = [
@@ -557,6 +567,23 @@ export default {
       "Пропонуй наступні питання про соціальні принципи та їх",
       "перевірку; не зводь діалог до пересування між будівлями."
     ].join(" ");
+    const governanceInstructions = [
+      "Відповідай на питання «хто встановлює правила?» у вже обговорюваній",
+      "Моделі середовища, а не про абстрактні можливості різних систем.",
+      "Спочатку однозначно назви суб'єкта: КЛАСТЕРНА ГРОМАДА",
+      "встановлює керуючі норми свого спільного простору.",
+      "Функціональні спільноти не встановлюють їх як окремий суб'єкт;",
+      "людина може впливати на них як член своєї кластерної громади.",
+      "Керуюча цифрова копія виконує, моніторить і перевіряє виконання",
+      "норм, але сама не є джерелом цих норм.",
+      "Предмет норм — спільні ресурси, інфраструктура, параметри",
+      "діяльності, що впливають на самодостатність кластера, а не",
+      "приватне життя людини. Джерела: МС-040 та МС-066.",
+      "Не домислюй процедури голосування, судового оскарження чи",
+      "виходу з громади там, де джерела їх не визначають.",
+      "Якщо запит короткий, відповідай прямо і коротко, використовуючи",
+      "контекст попередніх реплік."
+    ].join(" ");
     const stageInstructions = phase === "model" ? modelInstructions :
       phase === "alternatives" ? alternativeInstructions :
       phase === "systems" ? systemsInstructions : strategicInstructions;
@@ -565,7 +592,8 @@ export default {
         (phase === "model" || phase === "alternatives" ? " " + economicModelInstructions : "") +
         (asksThreeDimensions ? " " + economicTriadInstructions : "")
       : domain === "social" ? stageInstructions + " " +
-        (strategicExploration ? openSocialInstructions : socialInstructions)
+        (strategicExploration ? openSocialInstructions : socialInstructions) +
+        (phase === "model" && asksWhoGoverns ? " " + governanceInstructions : "")
       : stageInstructions;
 
     let response;
