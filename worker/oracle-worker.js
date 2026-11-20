@@ -438,12 +438,33 @@ export default {
       "Не переходь до узагальнених питань про всю Модель після",
       "вузької економічної теми: поглиблюй саме економічні зв'язки."
     ].join(" ");
+    const asksThreeDimensions = domain === "economy" &&
+      /(?:три|трьох|трьома)\s+(?:взаємопов[’']язан[а-яіїєґ]*\s+)?вимір|вимір[а-яіїєґ]*\s+(?:структурн[а-яіїєґ]*\s+)?ускладнен/iu.test(question);
+    const economicTriadInstructions = [
+      "МС-071 розрізняє ДВІ різні тріади. Не змішуй їх.",
+      "Три ВИМІРИ структурного ускладнення (розділ 2 МС-071):",
+      "1) ПОПИТ — виникнення запитів із якісно новими характеристиками;",
+      "2) ПРОПОЗИЦІЯ — ускладнення продуктивних спроможностей і зв'язків;",
+      "3) ВЗАЄМНІ ВПЛИВИ попиту та пропозиції — складніші залежності.",
+      "Окремо у розділі 22 МС-071 названі ТРИ СТРУКТУРИ:",
+      "структура запитів → структура дефіцитів → продуктивна структура.",
+      "Ці дві тріади не є тотожними.",
+      "АТ-162 дає визначення фрактальної економіки, але НЕ містить",
+      "окремого дослівного переліку трьох вимірів.",
+      "Для пояснення трьох вимірів використовуй МС-071 та зазнач",
+      "різні джерела визначення і трьох вимірів.",
+      "Для формули трьох вимірів обов'язково відповідай через",
+      "попит, пропозицію та їхні взаємні впливи, а не через дефіцити."
+    ].join(" ");
+    const needsCanonicalSearch = /атлас[а-яіїєґ]*\s+термін|(?:АТ|МС)[-–—]\s*\d{3}|\bтермін[ауиів]?\b|визначенн[яею]|епістем[а-яіїєґ]*/iu.test(question) ||
+      asksThreeDimensions;
     const stageInstructions = phase === "model" ? modelInstructions :
       phase === "alternatives" ? alternativeInstructions :
       phase === "systems" ? systemsInstructions : strategicInstructions;
     const instructions = domain === "economy"
       ? stageInstructions + " " + economicInstructions +
-        (phase === "model" || phase === "alternatives" ? " " + economicModelInstructions : "")
+        (phase === "model" || phase === "alternatives" ? " " + economicModelInstructions : "") +
+        (asksThreeDimensions ? " " + economicTriadInstructions : "")
       : stageInstructions;
 
     let response;
@@ -465,7 +486,7 @@ export default {
               vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
               max_num_results: 8
             }],
-            tool_choice: phase === "alternatives" ? "required" : "auto"
+            tool_choice: phase === "alternatives" || needsCanonicalSearch ? "required" : "auto"
           }),
           reasoning: { effort: "low" },
           text: {
@@ -663,7 +684,16 @@ export default {
       ["Какие новые компетенции и партнёрства могут понадобиться вашей организации?",
        "Какие риски следует проверить перед выбором пути развития?"]
     ] : fallbacks[topic];
-    const activeRoutes = namesModel ? [
+    const activeRoutes = namesModel && topic === "economy" ? [
+      [
+        "Які відмінності фрактальної економіки від економіки капіталу описано в Моделі середовища?",
+        "Як у Моделі середовища розрізняються потреби, дефіцити та продуктивні спроможності?"
+      ],
+      [
+        "Як перевірити двосторонній вплив нових потреб і продуктивних спроможностей?",
+        "Які показники дають змогу оцінити структурне ускладнення економічних взаємодій?"
+      ]
+    ] : namesModel ? [
       [
         "Як пов'язані між собою основні принципи Моделі середовища?",
         "Які системні взаємозв'язки визначають архітектуру Моделі середовища?"
