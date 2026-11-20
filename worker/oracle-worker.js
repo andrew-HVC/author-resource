@@ -498,6 +498,43 @@ export default {
       "Практичне питання стосується попиту, виробничих спроможностей,",
       "розподілу вигод та ризиків і механізмів економічного обліку."
     ].join(" ");
+    const economicObjectDefinitionInstructions = [
+      "Визначення суспільного економічного об'єкта в АТ-146",
+      "і епістемі МС-080 мають РІЗНІ критерії. Не ототожнюй їх.",
+      "АТ-146: суспільним є економічний об'єкт зі спільним",
+      "предметом взаємодії кількох суб'єктів за межами приватного",
+      "економічного контуру. Критерій — спільний економічний",
+      "предмет, ефект або вплив на права, ресурси чи інфраструктуру.",
+      "МС-080: об'єкт створюється задля визначеного позитивного",
+      "суспільного результату, а не вилучення прибутку як основної мети.",
+      "Перше визначення ширше за критерієм спільності, друге",
+      "визначає ціль і механізм спеціального суспільного об'єкта.",
+      "Ці положення можуть описувати різні межі одного поняття;",
+      "чи сумісні вони в єдиному каноні — не вирішено автоматично.",
+      "За прямого питання про це поняття наведи АТ-146 і МС-080",
+      "окремо і назви відмінність без вигаданої гармонізації.",
+      "Самостійної канонічної картки з назвою «Економічний об'єкт»",
+      "в двох чистових томах Атласу немає. Пояснення родового",
+      "поняття подавай як контекстне, а не як цитату Атласу.",
+      "АТ-006 «Цифровий економічний об'єкт» визначає ЦИФРОВЕ",
+      "представлення, а не універсальне визначення базового об'єкта."
+    ].join(" ");
+    const economicReproductionInstructions = [
+      "МС-080 у розділі 7 вже докладно задає вимоги до",
+      "відтворення суспільного економічного об'єкта:",
+      "ресурсний баланс експлуатації, зносу, ремонту, заміни",
+      "обладнання, модернізації та визначені відтворювані джерела.",
+      "Серед можливостей: платежі користувачів, внески спільноти,",
+      "інший стійкий економічний контур, договірне забезпечення,",
+      "поєднання комерційних і некомерційних функцій та інші.",
+      "Економічна стійкість НЕ тотожна комерційній самоокупності.",
+      "Не кажи, що механізм відтворення взагалі не розроблений.",
+      "Водночас окремо не заявляй завершеності механізмів",
+      "зв'язку суспільного результату з КЛВ/H, KWATT, редемпцією,",
+      "якщо їх не підтверджують конкретні знайдені епістеми.",
+      "Не вигадуй універсального платника й не стверджуй, що",
+      "будь-яка позитивна суспільна функція автоматично фінансується."
+    ].join(" ");
     const economicModelInstructions = [
       "Якщо матеріали підтверджують наявність відповідних понять,",
       "розкрий економічний зміст Моделі середовища: фрактальну",
@@ -544,8 +581,16 @@ export default {
     ].join(" ");
     const asksSocietalResults =
       /(?:освітн[а-яіїєґ]*\s+результат|результат[а-яіїєґ]*\s+(?:центр|навчан|люд)|суспільн[а-яіїєґ]*\s+результат|функціональн[а-яіїєґ]*\s+результат|вплив[а-яіїєґ]*\s+на\s+КЛВ|КЛВ\s*\/\s*H|суспільн[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+об['’]єкт)/iu.test(question);
+    // The Atlas and MS-080 currently apply DIFFERENT criteria to the
+    // same headword. Never silently treat them as one identical definition.
+    const asksEconomicObjectDefinition =
+      /(?:що\s+(?:таке|означає)|визначенн|чим\s+відрізня|як\s+визнач|різниц[яюі])[^?]{0,180}економічн[а-яіїєґ]*\s+об['’]єкт/iu.test(question);
+    const asksObjectReproduction =
+      /(?:економічн[а-яіїєґ]*\s+відтворенн|ресурсн[а-яіїєґ]*\s+(?:відтворенн|забезпеченн)|джерел[а-яіїєґ]*\s+(?:ресурс|фінансуван)|хто\s+.{0,40}(?:забезпечуват|фінансуват)).{0,160}/iu.test(question) &&
+      /об['’]єкт|центр|спроможн/iu.test(userText);
     const needsCanonicalSearch = directModelInquiry ||
-      (phase === "model" && (asksWhoGoverns || asksFunctionalCommunities || asksSocietalResults)) ||
+      (phase === "model" && (asksWhoGoverns || asksFunctionalCommunities ||
+        asksSocietalResults || asksEconomicObjectDefinition || asksObjectReproduction)) ||
       /атлас[а-яіїєґ]*\s+термін|(?:АТ|МС)[-–—]\s*\d{3}|\bтермін[ауиів]?\b|визначенн[яею]|епістем[а-яіїєґ]*/iu.test(question) ||
       asksThreeDimensions;
     const openSocialInstructions = [
@@ -657,12 +702,16 @@ export default {
     const instructions = domain === "economy"
       ? stageInstructions + " " + economicInstructions +
         (phase === "model" || phase === "alternatives" ? " " + economicModelInstructions : "") +
-        (asksThreeDimensions ? " " + economicTriadInstructions : "")
+        (asksThreeDimensions ? " " + economicTriadInstructions : "") +
+        (phase === "model" && asksEconomicObjectDefinition ? " " + economicObjectDefinitionInstructions : "") +
+        (phase === "model" && asksObjectReproduction ? " " + economicReproductionInstructions : "")
       : domain === "social" ? stageInstructions + " " +
         (strategicExploration ? openSocialInstructions : socialInstructions) +
         (phase === "model" && asksWhoGoverns ? " " + governanceInstructions : "") +
         (phase === "model" && asksFunctionalCommunities ? " " + functionalCommunityInstructions : "") +
-        (phase === "model" && asksSocietalResults ? " " + societalOutcomesInstructions : "")
+        (phase === "model" && asksSocietalResults ? " " + societalOutcomesInstructions : "") +
+        (phase === "model" && asksEconomicObjectDefinition ? " " + economicObjectDefinitionInstructions : "") +
+        (phase === "model" && asksObjectReproduction ? " " + economicReproductionInstructions : "")
       : stageInstructions;
 
     let response;
