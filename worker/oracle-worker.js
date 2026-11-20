@@ -218,8 +218,8 @@ export default {
       "але наступними питаннями відкрий концептуальний і прикладний рівні.",
       "Не роби обидва питання про перевірку резервів, формул і вихідних даних.",
       "Не повторюй попередні питання і не змінюй їхній реальний зміст.",
-      "Обидва питання: повні, самодостатні, зрозумілі новачку, до 150",
-      "символів, зі знаком питання; їх буде видно й надіслано дослівно.",
+      "Обидва питання обов’язкові: самодостатні, різні, до 140 символів",
+      "кожне, зі знаком питання; вони будуть надіслані дослівно.",
       "Поле related_term — лише коли є справді корисний, підтверджений",
       "у знайдених матеріалах термін, який доповнює концептуальне питання.",
       "Якщо такого терміна немає або він поведе в дрібниці, поверни null.",
@@ -292,7 +292,8 @@ export default {
       "стратегічні зміни, не називаючи Модель і не нав'язуючи її механізми.",
       "practical_question має відкривати наслідки сценаріїв для діяльності,",
       "клієнтських потреб, бізнес-моделі, ресурсів і довгострокових ризиків.",
-      "Ці запитання формулюй повністю, до 150 символів, із знаком питання.",
+      "Завжди створюй ОБИДВА різні питання, кожне до 140 символів.",
+      "Якщо якесь довше, скороти його; не залишай поле порожнім.",
       "Не повторюй уже дану відповідь; відповідь мовою відвідувача.",
       "Дай змістовну відповідь приблизно 120–220 слів.",
       "Поверни engagement_offer=false, engagement_focus=none, related_term=null.",
@@ -418,20 +419,74 @@ export default {
     const introducedModel = !strategicExploration &&
       /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїє]*\s+модел/i.test(answer);
 
-    // Structured navigation: a conceptual question and a practical-effects
-    // question, both generated in this same model call (no extra API call).
-    const seen = new Set([question.toLocaleLowerCase("uk")]);
+    // The model may omit, duplicate or overrun a question. Never silently
+    // remove one of the two navigation paths: supply a relevant fallback.
+    const seen = new Set([question.toLocaleLowerCase("uk").replace(/\s+/g, " ").trim()]);
     const suggestions = [];
-    const addQuestion = text => {
-      if (typeof text !== "string") return;
-      const q = text.trim().replace(/\s+/g, " ");
+    const addQuestion = value => {
+      if (typeof value !== "string") return false;
+      const q = value.trim().replace(/\s+/g, " ");
       const key = q.toLocaleLowerCase("uk");
-      if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key)) return;
+      if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key)) return false;
       seen.add(key);
       suggestions.push({ kind: "question", label: q, query: q });
+      return true;
     };
-    addQuestion(parsed?.conceptual_question);
-    addQuestion(parsed?.practical_question);
+    const topicText = question.toLocaleLowerCase("uk");
+    const topic = /енерг|електр|генерац|накопич|потужн/.test(topicText) ? "energy"
+      : /транспорт|логіст|перевез/.test(topicText) ? "transport"
+      : /агро|зерн|врожай|сільськ/.test(topicText) ? "agriculture"
+      : /територ|міст|простор|розселен/.test(topicText) ? "territory"
+      : /економ|бізнес|ринк|інвест/.test(topicText) ? "economy" : "general";
+    const fallbacks = {
+      energy: [
+        ["Як зміниться організація енергетики, виробництва та інфраструктури за поглиблення їхньої взаємозалежності?",
+         "Як потреби територій змінюють принципи проєктування енергетичних систем?"],
+        ["Які партнерства й компетенції потрібні енергокомпанії для спільних проєктів із виробництвом та інфраструктурою?",
+         "Як енергокомпанії оцінювати нові джерела доходів і ризики інтегрованих послуг?"]
+      ],
+      transport: [
+        ["Як нові транспортні системи можуть змінити організацію виробництва й територій?",
+         "Які принципи взаємодії транспорту, виробництва й інфраструктури можуть змінитися?"],
+        ["Які нові можливості й ризики це створює для операторів транспорту?",
+         "Що потрібно перевірити перед інвестиціями в нові транспортні рішення?"]
+      ],
+      agriculture: [
+        ["Як можуть змінитися взаємозв'язки агровиробництва, екології, енергетики та територій?",
+         "Які принципи організації агровиробництва змінює автоматизація?"],
+        ["Які нові виробничі можливості відкриваються перед агропідприємствами?",
+         "Які ресурси й ризики потрібно врахувати під час зміни агровиробництва?"]
+      ],
+      territory: [
+        ["Як взаємозалежність екології, енергетики й інфраструктури змінює організацію територій?",
+         "Які принципи організації територій можуть змінитися в наступні десятиліття?"],
+        ["Які практичні наслідки матимуть ці зміни для людей і підприємств?",
+         "За якими критеріями порівнювати сценарії розвитку територій?"]
+      ],
+      economy: [
+        ["Як разом зі структурою виробництва та потреб змінюються економічні відносини?",
+         "Які системні зміни можуть вплинути на довгострокову роль підприємств?"],
+        ["Які нові потреби клієнтів можуть визначити перспективні напрями бізнесу?",
+         "Як порівняти ризики й можливості різних сценаріїв розвитку бізнесу?"]
+      ],
+      general: [
+        ["Які взаємозв'язки між системами найбільше змінюють наше уявлення про майбутнє?",
+         "Які принципово нові підходи можуть виникнути на перетині галузей?"],
+        ["Які практичні можливості й ризики відкриваються за різних сценаріїв змін?",
+         "За якими ознаками порівнювати можливі шляхи розвитку?"]
+      ]
+    };
+    const addRoute = (candidate, alternatives) => {
+      if (addQuestion(candidate)) return;
+      for (const option of alternatives) {
+        if (addQuestion(option)) return;
+      }
+    };
+    if (parsed) {
+      // Conceptual breadth first, practical consequences second.
+      addRoute(parsed.conceptual_question, fallbacks[topic][0]);
+      addRoute(parsed.practical_question, fallbacks[topic][1]);
+    }
 
     // A precise source-backed term can be offered as an optional third question.
     const term = typeof parsed?.related_term === "string"
