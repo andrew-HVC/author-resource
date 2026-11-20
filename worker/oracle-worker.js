@@ -459,22 +459,29 @@ export default {
     // remove one of the two navigation paths: supply a relevant fallback.
     const seen = new Set([question.toLocaleLowerCase("uk").replace(/\s+/g, " ").trim()]);
     const suggestions = [];
-    const addQuestion = value => {
+    const addQuestion = (value, route = "practical") => {
       if (typeof value !== "string") return false;
       const q = value.trim().replace(/\s+/g, " ");
       const key = q.toLocaleLowerCase("uk");
       if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key)) return false;
       seen.add(key);
-      suggestions.push({ kind: "question", label: q, query: q });
+      suggestions.push({ kind: "question", route, label: q, query: q });
       return true;
     };
-    const topicText = question.toLocaleLowerCase("uk");
-    const topic = /енерг|електр|генерац|накопич|потужн/.test(topicText) ? "energy"
+    const topicText = userText.toLocaleLowerCase("uk");
+    const topic = /відбудов|зруйнован|архітектур|повоєнн/.test(topicText) ? "recovery" :
+      /енерг|електр|генерац|накопич|потужн/.test(topicText) ? "energy"
       : /транспорт|логіст|перевез/.test(topicText) ? "transport"
       : /агро|зерн|врожай|сільськ/.test(topicText) ? "agriculture"
       : /територ|міст|простор|розселен/.test(topicText) ? "territory"
       : /економ|бізнес|ринк|інвест/.test(topicText) ? "economy" : "general";
     const fallbacks = {
+      recovery: [
+        ["Чи достатньо нової архітектури будівель, якщо відтворюється попередня організація міст і територій?",
+         "Що має передувати архітектурі відбудови: проєкти будівель чи вибір системи організації територій?"],
+        ["За якими критеріями порівнювати відновлення зруйнованих міст і зміну самої структури розселення?",
+         "Як порівняти ресурсні потреби різних сценаріїв відбудови?"]
+      ],
       energy: [
         ["Як зміниться організація енергетики, виробництва та інфраструктури за поглиблення їхньої взаємозалежності?",
          "Як потреби територій змінюють принципи проєктування енергетичних систем?"],
@@ -536,16 +543,28 @@ export default {
         "Які дані потрібні для перевірки ключових рішень Моделі середовища?"
       ]
     ] : routes;
-    const addRoute = (candidate, alternatives) => {
-      if (addQuestion(candidate)) return;
+    // A conceptual route must gain altitude. An initial building-level
+    // discussion becomes a system-level question; the next opt-in choice
+    // explicitly opens structural alternatives without naming the Model yet.
+    const conceptualNext = phase === "open" && topic === "recovery"
+      ? "Чи достатньо нової архітектури будівель, якщо відтворюється попередня організація міст і територій?"
+      : phase === "systems" && topic === "recovery"
+      ? "Які альтернативні принципи організації територій можуть замінити відтворення зруйнованих міст?"
+      : phase === "open" && topic === "energy"
+      ? "Як зміниться організація виробництва й територій, якщо енергетика стане частиною їхнього проєктування?"
+      : phase === "systems" && topic === "energy"
+      ? "Які альтернативні принципи організації енергетичних систем і виробництва варто порівняти?"
+      : null;
+    const addRoute = (candidate, alternatives, route) => {
+      if (addQuestion(candidate, route)) return;
       for (const option of alternatives) {
-        if (addQuestion(option)) return;
+        if (addQuestion(option, route)) return;
       }
     };
     if (parsed) {
       // Conceptual breadth first, practical consequences second.
-      addRoute(parsed.conceptual_question, activeRoutes[0]);
-      addRoute(parsed.practical_question, activeRoutes[1]);
+      addRoute(conceptualNext || parsed.conceptual_question, activeRoutes[0], "conceptual");
+      addRoute(parsed.practical_question, activeRoutes[1], "practical");
     }
 
     // A precise source-backed term can be offered as an optional third question.
