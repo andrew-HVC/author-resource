@@ -1,6 +1,105 @@
 <!doctype html>
 <html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>ОРАКУЛ — тестування</title><style>
-:root{font-family:system-ui,sans-serif;color:#24332d;background:#f8f8f4;line-height:1.6}*{box-sizing:border-box}main{max-width:760px;margin:auto;padding:32px 20px}a{color:#285e47;text-underline-offset:4px}h1{font-size:42px;letter-spacing:-.04em;margin:30px 0 4px}p{color:#58675e}label{display:block;font-weight:650;margin:18px 0 6px}input,textarea{font:inherit;width:100%;padding:12px;border:1px solid #a7b2a9;border-radius:8px;background:white}textarea{min-height:110px;resize:vertical}button{font:inherit;color:white;background:#285e47;border:0;border-radius:8px;padding:11px 22px;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:wait}#result{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:20px;border-radius:8px;border:1px solid #d8ded6;min-height:80px}small{color:#58675e}a:focus-visible,input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid #77a88d;outline-offset:3px}</style></head>
-<body><main><a href="./">← До простору альтернативних ідей</a><h1>ОРАКУЛ</h1><p>Закрите тестування інтелектуального інтерфейсу. База знань ще не підключена.</p><form id="form"><label for="token">Тестовий пароль</label><input type="password" id="token" autocomplete="off" required minlength="24"><small>Введіть ORACLE_TEST_TOKEN, а не ключ OpenAI. Пароль не записується в код чи сховище сайту.</small><label for="question">Що вас цікавить?</label><textarea id="question" required maxlength="4000" placeholder="Поставте запитання"></textarea><button id="send">Запитати Оракула</button></form><h2>Відповідь</h2><div id="result" role="status" aria-live="polite">Очікується запит.</div><p><small>Тестові запити передаються через Cloudflare до OpenAI. Не вводьте конфіденційних відомостей. Кожен успішний запит використовує баланс API.</small></p></main><script>
-const form=document.getElementById('form'),token=document.getElementById('token'),question=document.getElementById('question'),send=document.getElementById('send'),result=document.getElementById('result');form.addEventListener('submit',async(e)=>{e.preventDefault();if(send.disabled)return;const q=question.value.trim();if(!q)return;send.disabled=true;result.textContent='Оракул опрацьовує запит…';try{const res=await fetch('https://oracle-api.andrewdonenko.workers.dev/',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token.value},body:JSON.stringify({question:q}),cache:'no-store',redirect:'error',credentials:'omit'});const data=await res.json();if(!res.ok)result.textContent='Помилка '+res.status+': '+(data.error||'Запит не виконано')+(data.status?' (API: '+data.status+')':'');else result.textContent=data.answer||'Модель не повернула текстової відповіді.'}catch(e){result.textContent='Не вдалося з’єднатися із сервером. Перевірте налаштування CORS та доступність Worker.'}finally{send.disabled=false}});
+:root{font-family:system-ui,sans-serif;color:#24332d;background:#f8f8f4;line-height:1.6}*{box-sizing:border-box}main{max-width:760px;margin:auto;padding:32px 20px}a{color:#285e47;text-underline-offset:4px}h1{font-size:42px;letter-spacing:-.04em;margin:30px 0 4px}p{color:#58675e}label{display:block;font-weight:650;margin:18px 0 6px}input,textarea{font:inherit;width:100%;padding:12px;border:1px solid #a7b2a9;border-radius:8px;background:white}textarea{min-height:110px;resize:vertical}button{font:inherit;color:white;background:#285e47;border:0;border-radius:8px;padding:11px 22px;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:wait}#result{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:20px;border-radius:8px;border:1px solid #d8ded6;min-height:80px}small{color:#58675e}a:focus-visible,input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid #77a88d;outline-offset:3px}\n#thread{display:flex;flex-direction:column;gap:16px;margin:16px 0 0}.message{white-space:pre-wrap;overflow-wrap:anywhere;max-width:94%;padding:14px 16px;border-radius:12px;border:1px solid #d8ded6;background:white}.message.user{align-self:flex-end;background:#e8eee7;border-color:#cfdbd0}.message.assistant{align-self:flex-start}.message .who{font-weight:700;font-size:13px;color:#285e47;margin-bottom:5px}.message .body{white-space:pre-wrap}.sources{font-size:13px;margin-top:12px;color:#58675e;overflow-wrap:anywhere}#result{min-height:0;border:0;padding:0;background:transparent;margin-top:8px;color:#285e47}.empty{font-size:15px}.secondary{margin-top:8px;background:transparent;color:#285e47;border:1px solid #285e47}\n</style></head>
+<body><main><a href="./">← До простору альтернативних ідей</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі підключеного корпусу знань. Оракул враховує контекст попередніх реплік.</p><form id="form"><label for="token">Тестовий пароль</label><input type="password" id="token" autocomplete="off" required minlength="24"><small>Введіть ORACLE_TEST_TOKEN, а не ключ OpenAI. Пароль не записується в код чи сховище сайту.</small><label for="question">Що вас цікавить?</label><textarea id="question" required maxlength="4000" placeholder="Поставте запитання"></textarea><button id="send">Запитати Оракула</button></form><h2>Діалог</h2><div id="thread" aria-live="polite" aria-label="Історія діалогу"><p class="empty">Тут з’являться запитання та відповіді.</p></div><div id="result" role="status" aria-live="polite"></div><button id="restart" type="button" class="secondary">Новий діалог</button><p><small>Пам’ять діалогу: до 6 останніх обмінів. Історія не записується у сховище браузера та зникає після оновлення сторінки або закриття вкладки.</small></p><p><small>Запити та попередні репліки передаються через Cloudflare до OpenAI. Не вводьте конфіденційних відомостей. Кожен успішний запит використовує баланс API.</small></p></main><script>
+const form = document.getElementById("form");
+const token = document.getElementById("token");
+const question = document.getElementById("question");
+const send = document.getElementById("send");
+const status = document.getElementById("result");
+const thread = document.getElementById("thread");
+const restart = document.getElementById("restart");
+const history = []; // Temporary memory: only in this page's JavaScript memory.
+
+function addMessage(role, content, sources = [], truncated = false) {
+  const placeholder = thread.querySelector(".empty");
+  if (placeholder) placeholder.remove();
+  const card = document.createElement("div");
+  card.className = "message " + role;
+  const who = document.createElement("div");
+  who.className = "who";
+  who.textContent = role === "user" ? "Ви" : "Оракул";
+  const body = document.createElement("div");
+  body.className = "body";
+  body.textContent = content;
+  card.append(who, body);
+  if (sources.length) {
+    const refs = document.createElement("div");
+    refs.className = "sources";
+    refs.textContent = "Джерела: " + sources.join("; ");
+    card.append(refs);
+  }
+  if (truncated) {
+    const note = document.createElement("div");
+    note.className = "sources";
+    note.textContent = "Відповідь могла бути скорочена через обмеження токенів.";
+    card.append(note);
+  }
+  thread.append(card);
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (send.disabled) return;
+  const q = question.value.trim();
+  if (!q) return;
+  send.disabled = true;
+  restart.disabled = true;
+  status.textContent = "Оракул опрацьовує запит…";
+  try {
+    const response = await fetch("https://oracle-api.andrewdonenko.workers.dev/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token.value
+      },
+      body: JSON.stringify({ question: q, history: history.slice(-12) }),
+      cache: "no-store",
+      credentials: "omit",
+      redirect: "error"
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      status.textContent = "Помилка " + response.status + ": " +
+        (data.error || "Запит не виконано") +
+        (data.status ? " (API: " + data.status + ")" : "");
+      return;
+    }
+    if (typeof data.answer !== "string" || !data.answer.trim()) {
+      status.textContent = "Модель не повернула текстової відповіді.";
+      return;
+    }
+
+    addMessage("user", q);
+    addMessage("assistant", data.answer, Array.isArray(data.sources) ? data.sources : [],
+      Boolean(data.truncated));
+    history.push(
+      { role: "user", content: q },
+      { role: "assistant", content: data.answer }
+    );
+    if (history.length > 12) history.splice(0, history.length - 12);
+    question.value = "";
+    status.textContent = "";
+    question.focus();
+  } catch {
+    status.textContent = "Не вдалося з’єднатися із сервером. " +
+      "Перевірте доступність Worker і налаштування CORS.";
+  } finally {
+    send.disabled = false;
+    restart.disabled = false;
+  }
+});
+
+restart.addEventListener("click", () => {
+  history.length = 0;
+  thread.replaceChildren();
+  const placeholder = document.createElement("p");
+  placeholder.className = "empty";
+  placeholder.textContent = "Новий діалог. Контекст попередньої розмови очищено.";
+  thread.append(placeholder);
+  status.textContent = "";
+  question.value = "";
+  question.focus();
+});
 </script></body></html>
