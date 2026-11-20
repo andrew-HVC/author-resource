@@ -81,7 +81,7 @@ function displaySourceName(name) {
   return original;
 }
 
-function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false) {
+function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none") {
   sources = [...new Set(sources.map(displaySourceName))];
   const placeholder = thread.querySelector(".empty");
   if (placeholder) placeholder.remove();
@@ -170,13 +170,20 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     const offer = document.createElement("div");
     offer.className = "engagement-offer";
     const link = document.createElement("a");
+    const isDemo = engagementFocus === "demo";
     link.href = "./?topic=" + encodeURIComponent("Модель середовища") +
-      "&intent=" + encodeURIComponent("Професійна дискусія") + "#cooperation";
+      "&intent=" + encodeURIComponent(isDemo
+        ? "Ініціатива розроблення" : "Професійна дискусія") +
+      (isDemo ? "&focus=demo" : "") + "#cooperation";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.textContent = "Підготувати пропозицію співпраці або критичного розгляду";
+    link.textContent = isDemo
+      ? "Долучитися до розроблення Демонстраційної моделі"
+      : "Підготувати пропозицію співпраці або критичного розгляду";
     const explanation = document.createElement("p");
-    explanation.textContent = "Відкриється форма підготовки звернення. Вона копіює текст, але не надсилає його.";
+    explanation.textContent = isDemo
+      ? "Мета — спільно створити дані для оцінювання інвестиційних сценаріїв, а не інвестувати у готовий проєкт. Форма готує звернення для копіювання і не надсилає його."
+      : "Відкриється форма підготовки звернення. Вона копіює текст, але не надсилає його.";
     offer.append(link, explanation);
     card.append(offer);
   }
@@ -220,7 +227,8 @@ async function askOracle(q) {
       Array.isArray(data.sources) ? data.sources : [],
       Boolean(data.truncated),
       Array.isArray(data.suggestions) ? data.suggestions : [],
-      data.engagement_offer === true);
+      data.engagement_offer === true,
+      typeof data.engagement_focus === "string" ? data.engagement_focus : "none");
     // Keep reading position at the START of the new answer,
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
