@@ -155,7 +155,7 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
       chip.textContent = topic.query;
       chip.title = topic.query;
       chip.setAttribute("aria-label", "Запитати Оракула: " + topic.query);
-      chip.addEventListener("click", () => askOracle(topic.query));
+      chip.addEventListener("click", () => askOracle(topic.query, topic.route || null));
       chipRow.append(chip);
     }
     if (chipRow.children.length) {
@@ -192,7 +192,7 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
   return card;
 }
 
-async function askOracle(q) {
+async function askOracle(q, route = null) {
   if (send.disabled || !q) return;
   send.disabled = true;
   restart.disabled = true;
@@ -205,7 +205,7 @@ async function askOracle(q) {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + token.value
       },
-      body: JSON.stringify({ question: q, history: history.slice(-12) }),
+      body: JSON.stringify({ question: q, navigation_route: route, history: history.slice(-12) }),
       cache: "no-store",
       credentials: "omit",
       redirect: "error"
@@ -233,7 +233,7 @@ async function askOracle(q) {
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
     history.push(
-      { role: "user", content: q },
+      { role: "user", content: q, route: route === "conceptual" || route === "practical" ? route : null },
       { role: "assistant", content: data.answer }
     );
     if (history.length > 12) history.splice(0, history.length - 12);
