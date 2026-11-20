@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>ОРАКУЛ — тестування</title><style>
 :root{font-family:system-ui,sans-serif;color:#24332d;background:#f8f8f4;line-height:1.6}*{box-sizing:border-box}main{max-width:760px;margin:auto;padding:32px 20px}a{color:#285e47;text-underline-offset:4px}h1{font-size:42px;letter-spacing:-.04em;margin:30px 0 4px}p{color:#58675e}label{display:block;font-weight:650;margin:18px 0 6px}input,textarea{font:inherit;width:100%;padding:12px;border:1px solid #a7b2a9;border-radius:8px;background:white}textarea{min-height:110px;resize:vertical}button{font:inherit;color:white;background:#285e47;border:0;border-radius:8px;padding:11px 22px;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:wait}#result{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:20px;border-radius:8px;border:1px solid #d8ded6;min-height:80px}small{color:#58675e}a:focus-visible,input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid #77a88d;outline-offset:3px}
-#thread{display:flex;flex-direction:column;gap:16px;margin:16px 0 0}.message{white-space:pre-wrap;overflow-wrap:anywhere;max-width:94%;padding:14px 16px;border-radius:12px;border:1px solid #d8ded6;background:white}.message.user{align-self:flex-end;background:#e8eee7;border-color:#cfdbd0}.message.assistant{align-self:flex-start}.message .who{font-weight:700;font-size:13px;color:#285e47}.message-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}.copy-answer{flex-shrink:0;margin:0;padding:5px 10px;font-size:13px;font-weight:550;border:1px solid #abc0b2;background:#fff;color:#285e47;border-radius:6px;cursor:pointer}.copy-answer:hover{background:#eef4ef}.message .body{white-space:normal}.message .body p{margin:0 0 10px}.message .body p:last-child{margin-bottom:0}.message .body ul{padding-left:22px;margin:6px 0 12px}.message .body li{margin:3px 0}.message .body h3{font-size:17px;margin:12px 0 8px}.sources{font-size:13px;margin-top:12px;color:#58675e;overflow-wrap:anywhere}#result{min-height:0;border:0;padding:0;background:transparent;margin-top:8px;color:#285e47}.empty{font-size:15px}.secondary{margin-top:8px;background:transparent;color:#285e47;border:1px solid #285e47}
+#thread{display:flex;flex-direction:column;gap:16px;margin:16px 0 0}.message{white-space:pre-wrap;overflow-wrap:anywhere;max-width:94%;padding:14px 16px;border-radius:12px;border:1px solid #d8ded6;background:white}.message.user{align-self:flex-end;background:#e8eee7;border-color:#cfdbd0}.message.assistant{align-self:flex-start}.message .who{font-weight:700;font-size:13px;color:#285e47}.message-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}.copy-answer{flex-shrink:0;margin:0;padding:5px 10px;font-size:13px;font-weight:550;border:1px solid #abc0b2;background:#fff;color:#285e47;border-radius:6px;cursor:pointer}.copy-answer:hover{background:#eef4ef}.related-topics{margin-top:16px;border-top:1px solid #e2e7e1;padding-top:11px}.related-title{font-size:13px;color:#58675e;margin:0 0 7px}.topic-buttons{display:flex;gap:7px;flex-wrap:wrap}.topic-chip{margin:0;border:1px solid #becfc2;border-radius:20px;background:#f2f7f2;color:#285e47;font-size:13px;padding:7px 11px;line-height:1.35;text-align:left;white-space:normal}.topic-chip:hover{background:#e0ede2}.topic-chip:disabled{opacity:.55}.message .body{white-space:normal}.message .body p{margin:0 0 10px}.message .body p:last-child{margin-bottom:0}.message .body ul{padding-left:22px;margin:6px 0 12px}.message .body li{margin:3px 0}.message .body h3{font-size:17px;margin:12px 0 8px}.sources{font-size:13px;margin-top:12px;color:#58675e;overflow-wrap:anywhere}#result{min-height:0;border:0;padding:0;background:transparent;margin-top:8px;color:#285e47}.empty{font-size:15px}.secondary{margin-top:8px;background:transparent;color:#285e47;border:1px solid #285e47}
 </style></head>
 <body><main><a href="./">← До простору альтернативних ідей</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі підключеного корпусу знань. Оракул враховує контекст попередніх реплік.</p><form id="form"><label for="token">Тестовий пароль</label><input type="password" id="token" autocomplete="off" required minlength="24"><small>Введіть ORACLE_TEST_TOKEN, а не ключ OpenAI. Пароль не записується в код чи сховище сайту.</small><label for="question">Що вас цікавить?</label><textarea id="question" required maxlength="4000" placeholder="Поставте запитання"></textarea><button id="send">Запитати Оракула</button></form><h2>Діалог</h2><div id="thread" aria-live="polite" aria-label="Історія діалогу"><p class="empty">Тут з’являться запитання та відповіді.</p></div><div id="result" role="status" aria-live="polite"></div><button id="restart" type="button" class="secondary">Новий діалог</button><p><small>Пам’ять діалогу: до 6 останніх обмінів. Історія не записується у сховище браузера та зникає після оновлення сторінки або закриття вкладки.</small></p><p><small>Запити та попередні репліки передаються через Cloudflare до OpenAI. Не вводьте конфіденційних відомостей. Кожен успішний запит використовує баланс API.</small></p></main><script>
 const form = document.getElementById("form");
@@ -72,7 +72,7 @@ async function copyAnswer(text) {
   if (!copied) throw new Error("Clipboard unavailable");
 }
 
-function addMessage(role, content, sources = [], truncated = false) {
+function addMessage(role, content, sources = [], truncated = false, suggestions = []) {
   const placeholder = thread.querySelector(".empty");
   if (placeholder) placeholder.remove();
   const card = document.createElement("div");
@@ -122,17 +122,43 @@ function addMessage(role, content, sources = [], truncated = false) {
     note.textContent = "Відповідь могла бути скорочена через обмеження токенів.";
     card.append(note);
   }
+  // Follow-up chips are shown only for assistant answers.
+  if (role === "assistant" && Array.isArray(suggestions) && suggestions.length) {
+    const related = document.createElement("div");
+    related.className = "related-topics";
+    const title = document.createElement("p");
+    title.className = "related-title";
+    title.textContent = "Пов’язані теми";
+    const chipRow = document.createElement("div");
+    chipRow.className = "topic-buttons";
+    for (const topic of suggestions.slice(0, 3)) {
+      if (!topic || (topic.kind !== "question" && topic.kind !== "term") ||
+          typeof topic.label !== "string" || typeof topic.query !== "string" ||
+          !topic.label.trim() || !topic.query.trim()) continue;
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "topic-chip";
+      chip.textContent = (topic.kind === "term" ? "Термін: " : "Запитання: ") + topic.label;
+      chip.setAttribute("aria-label",
+        (topic.kind === "term" ? "Пояснити термін: " : "Запитати Оракула: ") + topic.label);
+      chip.addEventListener("click", () => askOracle(topic.query));
+      chipRow.append(chip);
+    }
+    if (chipRow.children.length) {
+      related.append(title, chipRow);
+      card.append(related);
+    }
+  }
+
   thread.append(card);
   card.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-form.addEventListener("submit", async event => {
-  event.preventDefault();
-  if (send.disabled) return;
-  const q = question.value.trim();
-  if (!q) return;
+async function askOracle(q) {
+  if (send.disabled || !q) return;
   send.disabled = true;
   restart.disabled = true;
+  document.querySelectorAll(".topic-chip").forEach(chip => chip.disabled = true);
   status.textContent = "Оракул опрацьовує запит…";
   try {
     const response = await fetch("https://oracle-api.andrewdonenko.workers.dev/", {
@@ -159,8 +185,10 @@ form.addEventListener("submit", async event => {
     }
 
     addMessage("user", q);
-    addMessage("assistant", data.answer, Array.isArray(data.sources) ? data.sources : [],
-      Boolean(data.truncated));
+    addMessage("assistant", data.answer,
+      Array.isArray(data.sources) ? data.sources : [],
+      Boolean(data.truncated),
+      Array.isArray(data.suggestions) ? data.suggestions : []);
     history.push(
       { role: "user", content: q },
       { role: "assistant", content: data.answer }
@@ -175,7 +203,13 @@ form.addEventListener("submit", async event => {
   } finally {
     send.disabled = false;
     restart.disabled = false;
+    document.querySelectorAll(".topic-chip").forEach(chip => chip.disabled = false);
   }
+}
+
+form.addEventListener("submit", event => {
+  event.preventDefault();
+  askOracle(question.value.trim());
 });
 
 restart.addEventListener("click", () => {
