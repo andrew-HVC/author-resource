@@ -759,6 +759,53 @@ export default {
       "АТ-006 «Цифровий економічний об'єкт» визначає ЦИФРОВЕ",
       "представлення, а не універсальне визначення базового об'єкта."
     ].join(" ");
+    const privatePublicObjectCaseInstructions = [
+      "У цьому питанні є ДВІ різні площини порівняння.",
+      "Перша: приватна власність юридичної особи НЕ виключає",
+      "її господарських зобов'язань перед спільними системами.",
+      "Епістема «Організаційно-правові суб’єкти виробничої та",
+      "господарської діяльності» описує її територіальні",
+      "економічні домени в різних кластерах і нормативні внески.",
+      "Друга: у термінологічній картці Атласу «Суспільний",
+      "економічний об’єкт» та в однойменній епістемі Моделі",
+      "критерії суспільного характеру РІЗНІ.",
+      "Атлас: спільна економічна взаємодія або вплив на права,",
+      "ресурси й інфраструктуру незалежно від форми власності.",
+      "Епістема: мета отримати визначений позитивний",
+      "суспільний результат, а не вилучення прибутку як головна мета.",
+      "Прибуткове підприємство, яке лише використовує спільні",
+      "системи, не можна без додаткового обґрунтування оголосити",
+      "суспільним об'єктом за обома критеріями одночасно.",
+      "Не роби висновку «неузгодженостей не виявлено» лише тому,",
+      "що приватний статус суб'єкта сумісний зі спільними",
+      "зобов'язаннями. Це НЕ розв'язує відмінність визначень.",
+      "Не називай таку відмінність доказом формальної логічної",
+      "суперечності. Вона потребує авторського розмежування.",
+      "Для підтвердженої звірки порівняй обидва першоджерела:",
+      "Атлас термінів і однойменну епістему «Суспільний",
+      "економічний об’єкт». Якщо знайдено лише один, прямо",
+      "скажи, що повноцінну звірку двох визначень не завершено.",
+      "Якщо обидва підтверджені, поясни конкретний редакційний",
+      "ризик і запропонуй добровільну допомогу в узгодженні."
+    ].join(" ");
+    const enterpriseInfrastructureSourceInstructions = [
+      "Відвідувач просить назвати епістеми, на яких ґрунтується",
+      "пояснення господарської діяльності юридичної особи, її",
+      "економічних доменів та участі у спільній інфраструктурі.",
+      "НАСАМПЕРЕД перевір епістему «Організаційно-правові",
+      "суб’єкти виробничої та господарської діяльності». Саме",
+      "в ній описано економічний домен юридичної особи у кластері,",
+      "внески в експлуатацію, відновлення та резервування систем.",
+      "Також релевантні «Облік матеріальних, енергетичних і",
+      "фінансових потоків» і «Система прямого економічного обліку»,",
+      "«Приватний економічний контур домену як механізм свободи",
+      "та саморегуляції», «Адміністративна й інституційна архітектура».",
+      "Для суперечки про класифікацію суспільного об'єкта окремо",
+      "зістав картку Атласу й епістему «Суспільний економічний об’єкт».",
+      "Не пропускай основну епістему про юридичні особи, якщо",
+      "на неї фактично спиралася попередня відповідь.",
+      "Не видавай механізм внесків за готовий тариф."
+    ].join(" ");
     const economicReproductionInstructions = [
       "МС-080 у розділі 7 вже докладно задає вимоги до",
       "відтворення суспільного економічного об'єкта:",
@@ -824,13 +871,27 @@ export default {
     // The Atlas and MS-080 currently apply DIFFERENT criteria to the
     // same headword. Never silently treat them as one identical definition.
     const asksEconomicObjectDefinition =
-      /(?:що\s+(?:таке|означає)|визначенн|чим\s+відрізня|як\s+визнач|різниц[яюі])[^?]{0,180}економічн[а-яіїєґ]*\s+об['’]єкт/iu.test(question);
+      /(?:що\s+(?:таке|означає)|визначенн|визначен[ьямиів]*|чим\s+відрізня|як\s+визнач|різниц[яюі])[^?]{0,260}економічн[а-яіїєґ]*\s+об['’]єкт/iu.test(question);
+    const asksPublicPrivateObjectCase =
+      /приватн[а-яіїєґ]*\s+(?:підприємств|економічн[а-яіїєґ]*\s+об['’]єкт)/iu.test(question) &&
+      /суспільн[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+об['’]єкт/iu.test(question);
+    const asksObjectDefinitionDiscrepancy =
+      /неузгоджен|розбіжн|супереч|порівн[а-яіїєґ]*\s+визначенн/iu.test(question) &&
+      /економічн[а-яіїєґ]*\s+об['’]єкт/iu.test(question);
+    const needsEconomicObjectComparison =
+      asksEconomicObjectDefinition || asksPublicPrivateObjectCase ||
+      asksObjectDefinitionDiscrepancy;
+    const asksRelevantEpistemeList =
+      /(?:у\s+яких|які|де|назви)\s+(?:саме\s+)?(?:епістем|документ|джерел)|де\s+(?:це\s+)?описан/iu.test(question) &&
+      /підприємств|юридичн[а-яіїєґ]*\s+особ|спільн[а-яіїєґ]*\s+інфраструктур|економічн[а-яіїєґ]*\s+домен/iu.test(
+        [question,...userTurns.slice(-2).map(x => x.content)].join(" "));
     const asksObjectReproduction =
       /(?:економічн[а-яіїєґ]*\s+відтворенн|ресурсн[а-яіїєґ]*\s+(?:відтворенн|забезпеченн)|джерел[а-яіїєґ]*\s+(?:ресурс|фінансуван)|хто\s+.{0,40}(?:забезпечуват|фінансуват)).{0,160}/iu.test(question) &&
       /об['’]єкт|центр|спроможн/iu.test(userText);
     const needsCanonicalSearch = directModelInquiry ||
       (phase === "model" && (asksWhoGoverns || asksFunctionalCommunities ||
-        asksSocietalResults || asksEconomicObjectDefinition || asksObjectReproduction)) ||
+        asksSocietalResults || needsEconomicObjectComparison ||
+        asksObjectReproduction || asksRelevantEpistemeList)) ||
       /атлас[а-яіїєґ]*\s+термін|(?:АТ|МС)[-–—]\s*\d{3}|\bтермін[ауиів]?\b|визначенн[яею]|епістем[а-яіїєґ]*/iu.test(question) ||
       asksThreeDimensions;
     const openSocialInstructions = [
@@ -943,14 +1004,18 @@ export default {
       ? stageInstructions + " " + economicInstructions +
         (phase === "model" || phase === "alternatives" ? " " + economicModelInstructions : "") +
         (asksThreeDimensions ? " " + economicTriadInstructions : "") +
-        (phase === "model" && asksEconomicObjectDefinition ? " " + economicObjectDefinitionInstructions : "") +
+        (phase === "model" && needsEconomicObjectComparison ? " " + economicObjectDefinitionInstructions : "") +
+        (phase === "model" && (asksPublicPrivateObjectCase || asksObjectDefinitionDiscrepancy) ? " " + privatePublicObjectCaseInstructions : "") +
+        (phase === "model" && asksRelevantEpistemeList ? " " + enterpriseInfrastructureSourceInstructions : "") +
         (phase === "model" && asksObjectReproduction ? " " + economicReproductionInstructions : "")
       : domain === "social" ? stageInstructions + " " +
         (strategicExploration ? openSocialInstructions : socialInstructions) +
         (phase === "model" && asksWhoGoverns ? " " + governanceInstructions : "") +
         (phase === "model" && asksFunctionalCommunities ? " " + functionalCommunityInstructions : "") +
         (phase === "model" && asksSocietalResults ? " " + societalOutcomesInstructions : "") +
-        (phase === "model" && asksEconomicObjectDefinition ? " " + economicObjectDefinitionInstructions : "") +
+        (phase === "model" && needsEconomicObjectComparison ? " " + economicObjectDefinitionInstructions : "") +
+        (phase === "model" && (asksPublicPrivateObjectCase || asksObjectDefinitionDiscrepancy) ? " " + privatePublicObjectCaseInstructions : "") +
+        (phase === "model" && asksRelevantEpistemeList ? " " + enterpriseInfrastructureSourceInstructions : "") +
         (phase === "model" && asksObjectReproduction ? " " + economicReproductionInstructions : "")
       : stageInstructions;
 
