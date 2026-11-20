@@ -252,7 +252,12 @@ async function askOracle(q, route = null) {
     modelDiscovered = data.model_discovered === true;
     history.push(
       { role: "user", content: q, route: route === "conceptual" || route === "practical" ? route : null },
-      { role: "assistant", content: data.answer }
+      { role: "assistant", content: data.answer,
+        // Remember what we offered even if the visitor did not click it.
+        // The Worker will avoid repeating questions across navigation branches.
+        offered_questions: Array.isArray(data.suggestions)
+          ? data.suggestions.filter(item => item && typeof item.query === "string")
+              .slice(0, 3).map(item => item.query) : [] }
     );
     if (history.length > 12) history.splice(0, history.length - 12);
     question.value = "";
