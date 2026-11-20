@@ -94,6 +94,8 @@ export default {
       // Explicit profession and main subject outrank incidental vocabulary.
       // A reconstruction request can mention "economic ties" without
       // becoming an economic-theory conversation.
+      if (/(?:ат)[-–—]\s*(?:160|162|183|184|185)\b|(?:мс)[-–—]\s*(?:069|071|084)\b/iu.test(input))
+        return "economy";
       if (/економіст|економістк|економічн[а-яіїєґ]*\s+(?:систем|відносин|механізм|теорі)/.test(input)) return "economy";
       if (/відбудов|зруйнован|архітектур|повоєнн|генплан/.test(input)) return "recovery";
       if (/енерг|електр|генерац|накопич|потужн/.test(input)) return "energy";
