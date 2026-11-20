@@ -1019,12 +1019,16 @@ export default {
       !explicitlyDeclines && (asksForContact || asksToJoin || offersContribution || directReviewOffer);
     const previouslyOffered = body.engagement_shown === true ||
       history.some(x => x.engagement_offered);
-    const selectedFollowups = [
-      ...userTurns.map(x => x.route), navigationRoute
-    ].filter(x => x === "conceptual" || x === "practical").length;
+    // Count actual follow-up questions about the Model, whether selected
+    // from chips OR typed freely. The opening Model question isn't a follow-up.
+    const firstModelAnswerIndex = history.findIndex(x => x.role === "assistant" &&
+      /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(x.content));
+    const modelFollowupCount = firstModelAnswerIndex >= 0
+      ? history.slice(firstModelAnswerIndex + 1).filter(x => x.role === "user").length + 1
+      : userTurns.length;
     const sustainedModelInterest =
       !explicitlyDeclines && introducedModel && modelDiscovered &&
-      phase === "model" && selectedFollowups >= 2 && !previouslyOffered;
+      phase === "model" && modelFollowupCount >= 2 && !previouslyOffered;
     const showEngagement = activeCollaborationIntent || sustainedModelInterest;
     const engagementMode = activeCollaborationIntent ? "direct" :
       sustainedModelInterest ? "exploration" : "none";
