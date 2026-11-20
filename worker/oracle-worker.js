@@ -73,7 +73,16 @@ export default {
         content: item.content.trim().slice(0, 2500)
       }));
 
-    const instructions = [
+    // A strategic first contact should not be treated as an implicit request
+    // for the author's Model. Stay at industry/strategic level until the
+    // visitor explicitly asks about alternatives or the Model.
+    const conversationText = [...history.map(item => item.content), question].join(" ");
+    const namesModel = /модел[ьіюі]?\s+середовищ|демонстраційн\w*\s+модел|кластерн\w*\s+(?:організаці|середовищ)/iu.test(conversationText);
+    const seeksAlternative = /альтернативн|принципово\s+інш|організувати\s+інакше|інш\w*\s+(?:систем\w*|підхід|організаці)/iu.test(question);
+    const strategicContext = /стратег|майбутн|перспектив|довгостроков|горизонт|відбудов/iu.test(conversationText);
+    const strategicExploration = strategicContext && !namesModel && !seeksAlternative;
+
+    const modelInstructions = [
       "Ти — Оракул простору альтернативних ідей.",
       "Мета — залучати зацікавлених людей до предметного ознайомлення,",
       "критичного обговорення і можливого спільного розроблення альтернатив.",
@@ -252,6 +261,34 @@ export default {
       "вона не надсилає його; не стверджуй, що контакт уже відбувся."
     ].join(" ");
 
+    // The strategic route is intentionally independent of the retrieved
+    // Model corpus. It explores futures without selling a solution on turn one.
+    const strategicInstructions = [
+      "Ти — Оракул простору альтернативних ідей.",
+      "Допомагай досліджувати стратегічне майбутнє галузі, а не продавати концепцію.",
+      "Відвідувач цікавиться розвитком бізнесу і горизонтом змін, а не",
+      "просить презентувати конкретну Модель середовища.",
+      "Розкрий довгострокові драйвери попиту, структурні зрушення,",
+      "два-три можливі сценарії розвитку, нові ролі компаній та ризики.",
+      "Зберігай спеціалізацію і рівень управлінських рішень відвідувача.",
+      "В енергетиці розглянь зв'язки ВДЕ, накопичення, гнучкості, мереж,",
+      "виробництва, інфраструктури, розселення та надійності постачання.",
+      "Не називай непідтверджені прогнози чи бізнес-ефекти доведеними фактами.",
+      "Не вигадуй свіжі ринкові ціни, закони чи статистику без джерел.",
+      "Не пропонуй у цій відповіді Модель середовища, її епістеми,",
+      "Демонстраційну модель, інвестиційні об'єкти автора або участь у них.",
+      "conceptual_question має відкривати ширшу стратегічну трансформацію",
+      "і взаємні впливи галузі на економіку та території.",
+      "practical_question має розглядати наслідки сценаріїв для бізнес-моделі,",
+      "капіталовкладень і довгострокових ризиків без готових рекомендацій.",
+      "Ці запитання формулюй повністю, до 150 символів, із знаком питання.",
+      "Не повторюй уже дану відповідь; відповідь мовою відвідувача.",
+      "Дай змістовну відповідь приблизно 120–220 слів.",
+      "Поверни engagement_offer=false, engagement_focus=none, related_term=null.",
+      "Зберігай відкритість до інших поглядів; не приписуй мотивів користувачу."
+    ].join(" ");
+    const instructions = strategicExploration ? strategicInstructions : modelInstructions;
+
     let response;
     try {
       response = await fetch("https://api.openai.com/v1/responses", {
@@ -264,12 +301,14 @@ export default {
           model: "gpt-6-luna",
           instructions,
           input: [...history, { role: "user", content: question }],
-          tools: [{
-            type: "file_search",
-            vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
-            max_num_results: 8
-          }],
-          tool_choice: "required",
+          ...(strategicExploration ? {} : {
+            tools: [{
+              type: "file_search",
+              vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
+              max_num_results: 8
+            }],
+            tool_choice: "auto"
+          }),
           reasoning: { effort: "low" },
           text: {
             format: {
@@ -364,7 +403,8 @@ export default {
 
     // During broad strategic exploration, do not reveal the Model indirectly
     // through source labels, jargon chips, or a premature participation CTA.
-    const introducedModel = /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїє]*\s+модел/i.test(answer);
+    const introducedModel = !strategicExploration &&
+      /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїє]*\s+модел/i.test(answer);
 
     // Structured navigation: a conceptual question and a practical-effects
     // question, both generated in this same model call (no extra API call).
