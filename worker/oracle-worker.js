@@ -1272,8 +1272,16 @@ export default {
     const issueSignificance = typeof rawIssue?.significance === "string"
       ? rawIssue.significance.trim().slice(0, 240) : "";
     const hasSourceSearch = (data.output || []).some(x => x.type === "file_search_call");
+    // Cross-collection comparisons require a citation from EACH collection,
+    // not just a single citation and a model-generated claim about another.
+    const issueCollectionsCited = issueRefs.every(id => id.startsWith("АТ-")
+      ? sources.some(name => name.startsWith("Атлас термінів"))
+      : sources.some(name => name.startsWith("Модель середовища")));
+    const issueExplicitlyUnconfirmed =
+      /(?:неузгоджен|розбіжн)[^.!?]{0,55}(?:немає|відсутн|не\s+виявлен|не\s+підтверджен)|(?:немає|відсутн|не\s+виявлен|не\s+підтверджен)[^.!?]{0,55}(?:неузгоджен|розбіжн)|доказ[а-яіїєґ]*\s+(?:неузгоджен|розбіжн)[^.!?]{0,55}немає/iu.test(answer);
     const issueIsGrounded = !strategicExploration && introducedModel && !truncated &&
-      hasSourceSearch && sources.length > 0 && issueStatus !== "none" &&
+      hasSourceSearch && issueCollectionsCited && !issueExplicitlyUnconfirmed &&
+      sources.length > 0 && issueStatus !== "none" &&
       issueRefs.length >= 2 && !!issueSubject && !!issueSignificance &&
       issueRefs.every(id => answer.includes(id)) &&
       /неузгоджен|відмінн[а-яіїєґ]*\s+(?:критері|визначенн|підход)|розбіжн|суперечн/iu.test(answer);
@@ -1301,8 +1309,14 @@ export default {
       territory: "Організація територій",
       general: "Авторські концепції"
     }[domain] || "Авторські концепції");
+    // The source issue invitation is part of the answer, not only a link
+    // beneath the navigation chips. Do not duplicate a model-written invite.
+    const responseAnswer = inviteToResolveIssue &&
+      !/запрош[а-яіїєґ]*\s+долучит|мож(?:ете|на)\s+долучит|долучит[ися]*\s+до\s+(?:звірк|узгоджен|перевірк)/iu.test(answer)
+      ? answer + "\n\nЗапрошую за бажанням долучитися до звірки зазначених джерел і запропонувати автору аргументоване уточнення."
+      : answer;
     return json({
-      answer: answer ||
+      answer: responseAnswer ||
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше.",
       sources: introducedModel ? sources : [],
       conversation_domain: domain,
