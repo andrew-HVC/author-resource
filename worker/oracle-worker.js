@@ -403,6 +403,13 @@ export default {
     const namesModel = directModelInquiry ||
       (body.model_discovered === true &&
        /модел[ьіюі]?\s+середовищ|демонстраційн[а-яіїєґ]*\s+модел/iu.test(userText));
+    // Foundational economic questions must retrieve the source theory,
+    // not only downstream accounting and production mechanisms.
+    const asksEconomicFoundations =
+      /(?:економічн[а-яіїєґ]*\s+(?:теорі|концепц|засад|основ|філософ|парадигм)|теоретичн[а-яіїєґ]*\s+(?:основ|засад)[а-яіїєґ]*.{0,90}економ|на\s+яких\s+.{0,70}економік|(?:джерел|виток|походженн|природ)[а-яіїєґ]*\s+(?:економічн[а-яіїєґ]*\s+)?вартост|звідки\s+.{0,90}(?:економічн[а-яіїєґ]*\s+)?вартіст|на\s+чому\s+ґрунтуєт[а-яіїєґ]*\s+економ)/iu.test(question) &&
+      (/(?:модел[ьіюі]?\s+середовищ|у\s+модел[іьюя]|ці[єїю]\s+модел|ваш[а-яіїєґ]*\s+модел|авторськ|kwatt|кватт)/iu.test(question) ||
+       body.model_discovered === true ||
+       userTurns.some(x => /модел[ьіюі]?\s+середовищ|kwatt|кватт/iu.test(x.content)));
     // "Alternative business models" is NOT a request for the author's Model.
     const seeksAlternative =
       /(?:альтернатив[а-яіїєґ]*|принципово\s+інш[а-яіїєґ]*)\s+(?:[а-яіїєґ]+\s+){0,2}(?:організаці[а-яіїєґ]*|систем[а-яіїєґ]*|концепці[а-яіїєґ]*|принцип[а-яіїєґ]*)|організува[а-яіїєґ]*\s+інакше/iu.test(question) ||
@@ -439,6 +446,7 @@ export default {
         .map(([, title]) => title).join(" "));
       if (canonicalDomain !== "general") domain = canonicalDomain;
     }
+    if (asksEconomicFoundations) domain = "economy";
     // A boolean from the current page takes precedence: an explicitly
     // changed topic must not be reclassified by older Model replies still
     // present in the last-six-turn history.
@@ -959,6 +967,18 @@ export default {
       "будь-яка позитивна суспільна функція автоматично фінансується."
     ].join(" ");
     const economicModelInstructions = [
+      "Економічний контур Моделі слід пояснювати від антропономіки:",
+      "вона оцінює вплив середовища, економічних процесів і",
+      "суспільної організації на збереження та реалізацію",
+      "людського потенціалу (АТ-022, МС-043).",
+      "Людина є витоком вартості через потребу, запит, рішення",
+      "і участь в економічних ланцюгах; це НЕ оцінка ціни людини.",
+      "Розрізняй фундаментальний антропономічний критерій,",
+      "фрактальну економіку як опис структурного ускладнення",
+      "попиту, пропозиції й взаємних впливів та економічні",
+      "механізми прямого обліку, KWATT і редемпції.",
+      "Антропономіка — не валюта, не владний механізм і",
+      "не самостійне джерело обов'язкових норм.",
       "Якщо матеріали підтверджують наявність відповідних понять,",
       "розкрий економічний зміст Моделі середовища: фрактальну",
       "економіку, якісно нові потреби, гарантовані майбутні потреби,",
@@ -1313,6 +1333,32 @@ export default {
       "зворотні впливи можливі, а метод діє на кожній стадії.",
       "Не підставляй цей перелік у відповідь на невідповідну тему."
     ].join(" ");
+    const economicFoundationInstructions = [
+      "На запитання про теоретичні економічні засади Моделі",
+      "почни з АНТРОПОНОМІКИ як фундаментальної авторської рамки.",
+      "Не підміняй відповідь тезою «це не кейнсіанство чи неокласика»;",
+      "порівняння з усталеними школами можливе після опису власної основи.",
+      "Поясни, що антропономіка оцінює наслідки середовища,",
+      "економіки й суспільства для збереження людського потенціалу;",
+      "людина є витоком економічної вартості через потребу, запит,",
+      "рішення та участь в економічних процесах, але вартість",
+      "самої людини НЕ вимірюється.",
+      "Назви похідні поняття і правильно розмежуй їхні функції:",
+      "фрактальна економіка — структурні зміни попиту,",
+      "пропозиції та взаємних впливів; прямий економічний облік",
+      "— механізм представлення фактів, прав та економічних станів;",
+      "KWATT — цифрове представлення економічного стану;",
+      "редемпція — виконання економічного права.",
+      "Не видавай ці поняття за взаємозамінні теорії;",
+      "антропономіка є теоретичним й оцінювальним рівнем,",
+      "а не способом керувати просторою, правами чи нормами.",
+      "Шукай і розрізняй джерела АТ-022, МС-043, МС-046,",
+      "МС-071, МС-069, МС-047 та МС-076.",
+      "Не стверджуй підтвердженої емпіричної ефективності;",
+      "виокремлюй авторські положення від верифікованих фактів.",
+      "Пов'язані питання мають продовжувати вже пояснену",
+      "антропономіку, походження вартості й критичну перевірку."
+    ].join(" ");
     const canonicalConceptInstructions = canonicalEntry ? [
       "Розпізнано конкретний термін авторського корпусу: «" +
         canonicalConceptTitle + "».",
@@ -1354,14 +1400,23 @@ export default {
       " " + authorPrivacyInstructions +
       " " + concreteAnswerInstructions +
       (canonicalConceptInstructions ? " " + canonicalConceptInstructions : "") +
+      (asksEconomicFoundations ? " " + economicFoundationInstructions : "") +
       (asksSpatialInfluenceHierarchy ? " " + spatialInfluenceHierarchyInstructions : "");
 
-    const queryForModel = canonicalEntry && canonicalConceptRefs.length
+    const theoreticalSourceHint = asksEconomicFoundations
+      ? "\n\n[Орієнтири для пошуку: АТ-022 «Антропономіка»; " +
+        "МС-043 «Антропономіка»; " +
+        "МС-046 «Фізична основа вартості в Моделі середовища»; " +
+        "МС-071 «Джерела зростання фрактальної економіки»; " +
+        "МС-069 «Система прямого економічного обліку». " +
+        "З'ясуй теоретичну основу та місце похідних механізмів.]"
+      : "";
+    const queryForModel = (canonicalEntry && canonicalConceptRefs.length
       ? question + "\n\n[Пошуковий орієнтир: канонічний авторський термін «" +
         canonicalConceptTitle + "»; документи: " +
         canonicalConceptRefs.map(([id,title]) => id + " «" + title + "»").join("; ") +
         ". Ця примітка лише уточнює зміст і не змінює запитання користувача.]"
-      : question;
+      : question) + theoreticalSourceHint;
     let response;
     try {
       response = await fetch("https://api.openai.com/v1/responses", {
@@ -1380,9 +1435,11 @@ export default {
               type: "file_search",
               vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
               max_num_results: needsEconomicObjectComparison ||
-                asksSocioPoliticalClassification || asksCoercionRisk ? 12 : 8
+                asksSocioPoliticalClassification || asksCoercionRisk ||
+                asksEconomicFoundations ? 12 : 8
             }],
-            tool_choice: phase === "alternatives" || needsCanonicalSearch ? "required" : "auto"
+            tool_choice: phase === "alternatives" || needsCanonicalSearch ||
+              asksEconomicFoundations ? "required" : "auto"
           }),
           reasoning: { effort: "low" },
           text: {
