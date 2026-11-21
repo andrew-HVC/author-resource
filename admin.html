@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="uk"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://oracle-api.andrewdonenko.workers.dev; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'">
+<title>Аналітика Оракула · закритий кабінет</title>
+<link rel="stylesheet" href="assets/admin.css">
+</head><body><div class="container">
+<header><div><h1>Аналітика Оракула</h1><p>Приватний кабінет · Стратегія залучення до Демонстраційної моделі середовища</p></div><span class="tag">🔒 Адміністративний доступ</span></header>
+<main>
+<section class="panel login" id="login">
+  <h2>Вхід до кабінету</h2>
+  <p>Статистика не публікується на сайті. Для доступу потрібен окремий адміністративний секрет, який перевіряється на сервері Cloudflare.</p>
+  <label for="admin-secret">Адміністративний ключ</label>
+  <input id="admin-secret" type="password" autocomplete="off" spellcheck="false" placeholder="ADMIN_DASHBOARD_TOKEN">
+  <button class="primary" id="admin-login" type="button">Відкрити кабінет</button>
+  <div class="alert" id="login-error" role="alert"></div>
+  <p class="note">Ключ не записується в сховище браузера. Для безпеки закрийте вкладку після роботи.</p>
+</section>
+<section id="dashboard" hidden>
+  <div class="actions">
+    <div class="tabs" role="tablist" aria-label="Розділи аналітики">
+      <button type="button" data-tab="overview" role="tab" aria-selected="true">Огляд</button>
+      <button type="button" data-tab="questions" role="tab" aria-selected="false">Запитання</button>
+      <button type="button" data-tab="search" role="tab" aria-selected="false">Пошуковий попит</button>
+      <button type="button" data-tab="engagement" role="tab" aria-selected="false">Залучення</button>
+      <button type="button" data-tab="insights" role="tab" aria-selected="false">Аналітичний звіт</button>
+    </div>
+    <button id="admin-logout" class="secondary" type="button">Вийти</button>
+  </div>
+  <div id="dashboard-error" class="alert" role="alert"></div>
+  <section data-view="overview">
+    <div class="kpis">
+      <div class="kpi"><span class="label">Запитань · 30 днів</span><strong id="kpi-questions">—</strong><small>Реальні звернення</small></div>
+      <div class="kpi"><span class="label">Активних сесій</span><strong id="kpi-visitors">—</strong><small>Унікальні технічні ключі</small></div>
+      <div class="kpi"><span class="label">Зареєстровано</span><strong id="kpi-members">—</strong><small>Користувачів у базі</small></div>
+      <div class="kpi"><span class="label">Токени API · 30 днів</span><strong id="kpi-tokens">—</strong><small>Вхідні та вихідні разом</small></div>
+    </div>
+    <div class="cols">
+      <div class="panel"><h2>Тематика запитань</h2><p>Автоматична класифікація, може потребувати уточнення.</p><div class="bars" id="topics-chart"></div></div>
+      <div class="panel"><h2>Точки входу</h2><p>З яких сторінок користувачі відкривали Оракула.</p><div class="bars" id="pages-chart"></div></div>
+    </div>
+    <div class="panel"><h2>Якість відповідей</h2><p id="feedback-totals">Оцінки користувачів ще не зібрані.</p><p id="privacy-totals" class="note"></p></div>
+  </section>
+  <section data-view="questions" hidden>
+    <div class="panel"><h2>Журнал звернень</h2>
+      <p>Текст відображається лише там, де користувач окремо погодився на його збереження. Інші звернення представлені тематикою та кількісними показниками.</p>
+      <div class="controls"><label>Тема<select id="question-topic"><option value="">Усі теми</option></select></label>
+      <button class="primary" type="button" id="questions-refresh">Показати</button>
+      <button type="button" id="questions-export">Експортувати CSV</button></div>
+      <div class="table-wrapper"><table><thead><tr><th>Час</th><th>Тема</th><th>Початкова сторінка</th><th>Запитання за згодою</th><th>Оцінка</th></tr></thead><tbody id="question-rows"><tr><td colspan="5">Дані ще не завантажено.</td></tr></tbody></table></div>
+      <p class="note">Тексти видаляються після 30 днів; агрегована статистика може зберігатися без текстів. Експорт завантажується лише у ваш браузер.</p>
+    </div>
+  </section>
+  <section data-view="search" hidden>
+    <div class="panel"><h2>Google Search Console ↔ Оракул</h2>
+      <p>Порівняння тематичних груп: що люди шукають у Google, які сторінки знаходять і що запитують в Оракула. Це зіставлення інтересів, а не ідентифікація окремих відвідувачів.</p>
+      <div class="controls"><button class="primary" type="button" id="gsc-sync">Отримати дані Search Console</button>
+      <span id="gsc-status" class="note">Для автоматичного імпорту потрібен доступ сервісного акаунта Google.</span></div>
+      <div class="box"><strong>Альтернатива без API:</strong> експортуйте таблицю запитів із Search Console у CSV та відкрийте її тут. CSV читається локально й не передається на сервер.
+        <div class="upload"><input type="file" id="gsc-file" accept=".csv,text/csv"></div>
+      </div>
+      <div class="cols">
+        <div class="panel"><h2>Теми пошукових запитів</h2><div class="bars" id="gsc-chart"></div></div>
+        <div class="panel"><h2>Зіставлення інтересів</h2><div id="gsc-compare" class="muted">Дані поки відсутні.</div></div>
+      </div>
+      <div class="table-wrapper"><table><thead><tr><th>Пошуковий запит</th><th>Сторінка</th><th>Покази</th><th>Кліки</th><th>Тема</th></tr></thead>
+      <tbody id="gsc-rows"><tr><td colspan="5">Немає імпортованих даних.</td></tr></tbody></table></div>
+      <p class="note">Search Console приховує частину запитів; дані відображають видимість у Google, а не всю поведінку аудиторії. Класифікація тем — орієнтовна.</p>
+    </div>
+  </section>
+  <section data-view="engagement" hidden>
+    <div class="kpis">
+      <div class="kpi"><span class="label">Гостьові сесії</span><strong id="kpi-guests">—</strong><small>Створені пробні доступи</small></div>
+      <div class="kpi"><span class="label">Зареєстровано</span><strong id="kpi-members2">—</strong><small>Підтверджені email</small></div>
+      <div class="kpi"><span class="label">Тексти за згодою</span><strong id="kpi-optins">—</strong><small>Можна досліджувати зміст</small></div>
+      <div class="kpi"><span class="label">Позитивні оцінки</span><strong id="kpi-positive">—</strong><small>Якість відповідей</small></div>
+    </div>
+    <div class="panel"><h2>Переходи до співпраці</h2>
+      <p>Поточна форма сайту лише готує звернення для копіювання. Поки немає підключеної форми надсилання, не можна достовірно рахувати заявки, конверсії у співпрацю або внески.</p>
+      <p>Наступний крок після налаштування адміністративного кабінету — серверна форма звернення з підтвердженням відправлення й окремою згодою на контакт.</p>
+    </div>
+  </section>
+  <section data-view="insights" hidden>
+    <div class="panel"><h2>Аналітичний звіт ШІ</h2>
+      <p>Звіт будується з реальної статистики та прикладів звернень, тексти яких користувачі дозволили зберігати. Він не змінює Модель, не створює нові епістеми й не публікується автоматично.</p>
+      <button class="primary" id="generate-insights" type="button">Проаналізувати звернення</button>
+      <p class="note">Для генерації використовується платний API. Запускайте її лише за потреби.</p>
+      <div id="insights-status" class="note" role="status"></div>
+      <div class="report" id="insights-report">Звіт поки не сформовано.</div>
+    </div>
+  </section>
+</section>
+</main><footer>Аналітика призначена тільки для адміністратора. Доступ до даних перевіряється сервером; HTML-сторінка сама по собі не містить приватних даних.</footer>
+</div><script src="assets/admin.js"></script></body></html>
