@@ -91,3 +91,13 @@ h3{font-size:20px;line-height:1.3;letter-spacing:-.01em;margin:0 0 12px}p{margin
   .oracle-drawer-top span{display:none}
 }
 @media(prefers-reduced-motion:reduce){.oracle-trigger-chevron{transition:none}}
+
+/* Voluntary inbox: the server remains disabled until D1 & Turnstile are ready. */
+.contact-delivery{border-top:1px solid var(--line);margin-top:23px;padding-top:22px}
+.contact-delivery h3{font-size:17px;margin-bottom:5px}
+.contact-delivery input[type=email]{display:block;width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid #bac8bf;border-radius:6px;margin:0 0 12px}
+.contact-delivery .contact-agreement{display:flex;align-items:start;gap:9px;margin:10px 0 14px;font-size:13px;font-weight:500}
+.contact-agreement input{width:auto;flex:none;accent-color:var(--accent);margin:4px 0 0}
+#contact-turnstile{margin:10px 0}
+.contact-delivery [data-delivery-status]{font-size:13px;min-height:20px;margin:9px 0 4px;color:var(--accent)}
+.contact-delivery button:disabled{opacity:.5;cursor:not-allowed}
