@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS collaboration_threads (
   intent TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  member_read_at INTEGER NOT NULL DEFAULT 0,
-  admin_read_at INTEGER NOT NULL DEFAULT 0,
+  member_read_seq INTEGER NOT NULL DEFAULT 0,
+  admin_read_seq INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed'))
 );
 CREATE INDEX IF NOT EXISTS idx_collaboration_threads_owner
@@ -20,13 +20,14 @@ CREATE INDEX IF NOT EXISTS idx_collaboration_threads_admin
   ON collaboration_threads(updated_at);
 
 CREATE TABLE IF NOT EXISTS collaboration_messages (
-  id TEXT PRIMARY KEY,
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  id TEXT NOT NULL UNIQUE,
   thread_id TEXT NOT NULL REFERENCES collaboration_threads(id) ON DELETE CASCADE,
   sender TEXT NOT NULL CHECK(sender IN ('member','admin')),
   message TEXT NOT NULL CHECK(length(message) BETWEEN 1 AND 5000),
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_collaboration_messages_thread
-  ON collaboration_messages(thread_id,created_at,id);
+  ON collaboration_messages(thread_id,seq);
 CREATE INDEX IF NOT EXISTS idx_collaboration_messages_sender
-  ON collaboration_messages(thread_id,sender,created_at);
+  ON collaboration_messages(thread_id,sender,seq);
