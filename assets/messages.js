@@ -129,7 +129,7 @@ async function openThread(id,quiet=false){
     $("chat-reply-text").disabled=t.status!=="open";
     $("chat-reply-send").disabled=t.status!=="open";
     $("chat-closed-note").hidden=t.status==="open";
-    await req("/access/chat/read",{method:"POST",auth:true,body:{thread_id:id}});
+    await req("/access/chat/read",{method:"POST",auth:true,body:{thread_id:id,read_seq:latest}});
     await loadThreads();
     if(!quiet)notice("");
   }catch(e){notice(e.message,true)}
@@ -140,7 +140,10 @@ async function verifySession(){
   state.token=token;
   try{
     const d=await req("/access/me",{auth:true});
-    if(d.kind!=="member")throw Error("Email-verified account required");
+    if(d.kind!=="member"){
+      state.token="";storeRemove(MEMBER_KEY);storeRemove(EMAIL_KEY);
+      throw Error("Email-verified account required");
+    }
     state.email=d.email||storeGet(EMAIL_KEY)||"Підтверджений користувач";
     $("chat-current-email").textContent=state.email;
     $("chat-login").hidden=true;$("chat-app").hidden=false;
@@ -153,9 +156,15 @@ async function verifySession(){
     else compose(false);
     notice("");
     return true;
-  }catch{
-    state.token="";storeRemove(MEMBER_KEY);storeRemove(EMAIL_KEY);
-    $("chat-app").hidden=true;return false;
+  }catch(e){
+    $("chat-app").hidden=true;
+    if(state.token){
+      // Network errors and chat-migration failures must not log the Oracle out.
+      $("chat-login").hidden=true;
+      notice("Не вдалося завантажити особисті діалоги: "+e.message,true);
+      return true;
+    }
+    return false;
   }
 }
 async function init(){
@@ -244,7 +253,7 @@ async function reply(){
 document.addEventListener("DOMContentLoaded",()=>{
   $("chat-send-code").addEventListener("click",sendCode);
   $("chat-verify").addEventListener("click",verifyCode);
-  $("chat-new").addEventListener("click",()=>{state.source="model";compose(true);});
+  $("chat-new").addEventListener("click",()=>{compose(true);});
   $("chat-start").addEventListener("click",submitNew);
   $("chat-reply-send").addEventListener("click",reply);
   $("chat-logout").addEventListener("click",async()=>{
