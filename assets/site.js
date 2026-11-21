@@ -24,6 +24,13 @@
   interest.addEventListener("change",draft);
   intent.addEventListener("change",draft);
   draft();
+  // Preserve the intent of older Oracle links after the root homepage was removed.
+  if(params.get("focus")==="demo" || params.get("focus")==="author" || params.has("issue")) {
+    requestAnimationFrame(()=>{
+      const target=document.getElementById("participate");
+      if(target) target.scrollIntoView({block:"start"});
+    });
+  }
   copy.addEventListener("click",async()=>{
     if(!message.value.trim()){status.textContent="Спочатку додайте текст звернення.";return}
     try {await navigator.clipboard.writeText(message.value);status.textContent="Текст скопійовано. Це ще не надсилання звернення.";}
