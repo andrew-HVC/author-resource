@@ -70,11 +70,18 @@
         <label for="chat-initial-message">Текст звернення</label>
         <textarea id="chat-initial-message" maxlength="5000" rows="7" placeholder="Опишіть предмет інтересу, компетенції та можливий внесок"></textarea>
         <label class="chat-consent"><input id="chat-consent" type="checkbox">Погоджуюся на зберігання звернення та переписки для розгляду пропозиції й надання відповіді.</label>
+        <label class="chat-consent"><input id="chat-analysis-consent" type="checkbox">Окремо дозволяю використовувати фрагменти моїх повідомлень для тематичної аналітики Стратегії залучення, зокрема в платному API ШІ. Це необов'язково; особисті дані маскуються за можливості.</label>
         <button id="chat-start" type="button" class="chat-button">Надіслати звернення</button>
       </div>
       <div id="chat-conversation" hidden>
         <div class="chat-conversation-heading"><div><h2 id="chat-thread-title">Діалог</h2><p id="chat-thread-summary"></p></div><span id="chat-thread-state"></span></div>
         <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+        <label class="chat-consent chat-analysis-toggle">
+          <input id="chat-thread-analysis-consent" type="checkbox">
+          <span>Дозволяю використовувати фрагменти моїх повідомлень у тематичних звітах Стратегії залучення через API ШІ. Необов'язково, можна відкликати. Повне видалення вже сформованих звітів не гарантується.</span>
+        </label>
+        <p id="chat-analysis-status" class="chat-analysis-note" role="status"></p>
+
         <div class="chat-reply">
           <label for="chat-reply-text">Ваше повідомлення</label>
           <textarea id="chat-reply-text" maxlength="5000" rows="3" placeholder="Продовжити предметне обговорення…"></textarea>
@@ -85,7 +92,7 @@
       <div id="chat-empty" class="chat-empty">Оберіть діалог або створіть нове звернення. Після відповіді адміністратора тут з’явиться повідомлення.</div>
     </section>
    </div>
-   <p class="chat-privacy-note">Листування приватне й не публікується. Воно не використовується для навчання чи відповідей Оракула. Деталі — у <a href="privacy.html">політиці приватності</a>.</p>
+   <p class="chat-privacy-note">Листування приватне й не публікується. Текст не входить до бази знань Оракула. Для окремого аналітичного звіту ШІ потрібна ваша згода. Деталі — у <a href="privacy.html">політиці приватності</a>.</p>
  </section>
 </main>
 <script src="assets/messages.js" defer></script>
