@@ -290,11 +290,19 @@ async function overview(env){
     env.DB.prepare("SELECT DATE(created_at,'unixepoch') AS date, COUNT(*) AS count FROM oracle_questions WHERE created_at>=? GROUP BY DATE(created_at,'unixepoch') ORDER BY date").bind(thirty).all(),
     env.DB.prepare("SELECT SUM(CASE WHEN feedback=1 THEN 1 ELSE 0 END) AS helpful,SUM(CASE WHEN feedback=-1 THEN 1 ELSE 0 END) AS unhelpful FROM oracle_questions WHERE created_at>=?").bind(thirty).first()
   ]);
-  const [guests,members] = await Promise.all([
+  const [guests,members,pageviews] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS n FROM guest_trials").first(),
-    env.DB.prepare("SELECT COUNT(*) AS n FROM users").first()
+    env.DB.prepare("SELECT COUNT(*) AS n FROM users").first(),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM portal_events WHERE event_type='page_view' AND created_at>=?").bind(thirty).first()
   ]);
-  return {period_days:30,totals:{...totals,guests:guests?.n||0,members:members?.n||0,
+  const inputPrice=Number(env.MODEL_INPUT_USD_PER_M);
+  const outputPrice=Number(env.MODEL_OUTPUT_USD_PER_M);
+  const validPrices=env.MODEL_INPUT_USD_PER_M!==undefined && env.MODEL_OUTPUT_USD_PER_M!==undefined &&
+    Number.isFinite(inputPrice)&&Number.isFinite(outputPrice)&&inputPrice>=0&&outputPrice>=0;
+  const estimated_cost_usd=validPrices?
+    (Number(totals?.input_tokens||0)*inputPrice+Number(totals?.output_tokens||0)*outputPrice)/1000000:null;
+  return {period_days:30,totals:{...totals,pageviews:pageviews?.n||0,
+    estimated_cost_usd,guests:guests?.n||0,members:members?.n||0,
     feedback_helpful:feedback?.helpful||0,feedback_unhelpful:feedback?.unhelpful||0},
     topics:topics.results||[],pages:pages.results||[],days:days.results||[]};
 }
@@ -376,6 +384,15 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     return bad(cors,"Unknown admin action",404);
   }
   const absent=requireDB(env,cors);if(absent)return absent;
+  if(request.method==="POST"&&path==="/access/pageview"){
+    const b=await safeBody(request);
+    if(!b || !["model","feniks","demo"].includes(b.source_page))
+      return bad(cors,"Invalid source page",400);
+    await env.DB.prepare(
+      "INSERT INTO portal_events(id,created_at,event_type,source_page) VALUES (?,?,?,?)"
+    ).bind(crypto.randomUUID(),now(),"page_view",b.source_page).run();
+    return obj(cors,{ok:true});
+  }
   if(request.method==="POST"&&path==="/access/guest"){
     const b=await safeBody(request);if(!b)return bad(cors,"Invalid request");
     return guestStart(env,request,b,cors);
