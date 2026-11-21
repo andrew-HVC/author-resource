@@ -16,6 +16,7 @@
     if(!["image","video"].includes(item.type))return false;
     if(item.type==="video"&&!/\.(mp4|webm)$/i.test(item.src))return false;
     if(item.type==="image"&&/\.(mp4|webm)$/i.test(item.src))return false;
+    if(item.id!==undefined&&!/^GR-[0-9]{3,5}$/.test(String(item.id)))return false;
     return Boolean(document.getElementById(item.section));
   };
   const element=(tag,cls,text)=>{
@@ -74,6 +75,13 @@
     if(status)meta.append(element("small","visual-status",status));
     const attribution=label(item.credit,150);
     if(attribution)meta.append(element("small","visual-credit",attribution));
+    if(item.id){
+      const discuss=element("a","visual-discuss","Обговорити з Оракулом ↗");
+      discuss.href="oracle.html?source="+page+"&focus="+encodeURIComponent("graphic:"+item.id);
+      discuss.target="_blank";discuss.rel="noopener noreferrer";
+      discuss.setAttribute("aria-label","Обговорити з Оракулом: "+label(item.title,100));
+      meta.append(discuss);
+    }
     figure.append(meta);
     return figure;
   }
