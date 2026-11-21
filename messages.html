@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Повідомлення · Авторський дослідницький ресурс</title>
+<meta name="description" content="Особисті повідомлення щодо співпраці над Демонстраційною моделлю середовища. Доступ після підтвердження електронної адреси.">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/messages.css">
+</head>
+<body>
+<a class="skip" href="#content">Перейти до повідомлень</a>
+<header class="site-header">
+ <div class="shell header-inner">
+  <a class="brand" href="model.html">АВТОРСЬКИЙ РЕСУРС<span>Модель середовища</span></a>
+  <nav class="site-nav" aria-label="Навігація"><a href="model.html">Модель</a><a href="feniks.html">Фенікс</a><a href="demo.html">Демомодель</a></nav>
+ </div>
+</header>
+<main id="content" class="shell chat-shell">
+ <div class="chat-heading">
+  <div><p class="chat-eyebrow">Закрита комунікація</p><h1>Повідомлення</h1>
+  <p>Предметна переписка щодо співпраці. Повідомлення бачите тільки ви та адміністратор ресурсу.</p></div>
+  <a href="model.html" class="chat-back">До матеріалів сайту ↗</a>
+ </div>
+ <div id="chat-state" class="chat-status" role="status" aria-live="polite">Перевіряємо доступ…</div>
+ <section id="chat-login" class="chat-login" hidden aria-label="Вхід до переписки">
+  <h2>Вхід через електронну пошту</h2>
+  <p>Введіть email і підтвердьте його одноразовим кодом. Це забезпечує доступ тільки до ваших діалогів.</p>
+  <label for="chat-email">Електронна адреса</label>
+  <input id="chat-email" type="email" autocomplete="email" maxlength="254" placeholder="email@example.com">
+  <div id="chat-turnstile" aria-label="Перевірка захисту від автоматичних реєстрацій"></div>
+  <button type="button" class="chat-button" id="chat-send-code">Отримати код</button>
+  <div id="chat-code-area" hidden>
+    <label for="chat-code">Код із листа (6 цифр)</label>
+    <input id="chat-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}">
+    <button type="button" class="chat-button" id="chat-verify">Підтвердити й увійти</button>
+  </div>
+ </section>
+ <section id="chat-app" class="chat-app" hidden aria-label="Особисті діалоги">
+   <div class="chat-user-line"><div>Вхід: <strong id="chat-current-email">—</strong></div>
+     <button type="button" id="chat-logout" class="chat-link-button">Вийти</button>
+   </div>
+   <div class="chat-layout">
+    <aside class="chat-sidebar" aria-label="Ваші звернення">
+      <div class="chat-sidebar-top"><h2>Діалоги <span id="chat-unread-count" hidden></span></h2>
+      <button class="chat-button" id="chat-new" type="button">+ Нове звернення</button></div>
+      <div id="chat-threads" class="chat-threads"><p>Поки немає звернень.</p></div>
+    </aside>
+    <section class="chat-main" aria-label="Переписка">
+      <div id="chat-compose" class="chat-compose" hidden>
+        <h2>Нове звернення</h2>
+        <label for="chat-interest">Тема</label>
+        <select id="chat-interest">
+          <option>Модель середовища</option>
+          <option>Проєкт «Фенікс»</option>
+          <option>Демонстраційна модель</option>
+        </select>
+        <label for="chat-intent">Пропонований формат участі</label>
+        <select id="chat-intent">
+          <option>Професійна дискусія та критика</option>
+          <option>Пропозиція компетенцій</option>
+          <option>Дослідницькі дані та методики</option>
+          <option>Інженерні розрахунки</option>
+          <option>Цифрове моделювання</option>
+          <option>Організаційна участь</option>
+          <option>Цільове фінансування</option>
+          <option>Ознайомлення з матеріалами</option>
+        </select>
+        <label for="chat-initial-message">Текст звернення</label>
+        <textarea id="chat-initial-message" maxlength="5000" rows="7" placeholder="Опишіть предмет інтересу, компетенції та можливий внесок"></textarea>
+        <label class="chat-consent"><input id="chat-consent" type="checkbox">Погоджуюся на зберігання звернення та переписки для розгляду пропозиції й надання відповіді.</label>
+        <button id="chat-start" type="button" class="chat-button">Надіслати звернення</button>
+      </div>
+      <div id="chat-conversation" hidden>
+        <div class="chat-conversation-heading"><div><h2 id="chat-thread-title">Діалог</h2><p id="chat-thread-summary"></p></div><span id="chat-thread-state"></span></div>
+        <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+        <div class="chat-reply">
+          <label for="chat-reply-text">Ваше повідомлення</label>
+          <textarea id="chat-reply-text" maxlength="5000" rows="3" placeholder="Продовжити предметне обговорення…"></textarea>
+          <button type="button" class="chat-button" id="chat-reply-send">Надіслати</button>
+          <p id="chat-closed-note" hidden>Діалог закритий для відповідей. Ви можете створити нове звернення.</p>
+        </div>
+      </div>
+      <div id="chat-empty" class="chat-empty">Оберіть діалог або створіть нове звернення. Після відповіді адміністратора тут з’явиться повідомлення.</div>
+    </section>
+   </div>
+   <p class="chat-privacy-note">Листування приватне й не публікується. Воно не використовується для навчання чи відповідей Оракула. Деталі — у <a href="privacy.html">політиці приватності</a>.</p>
+ </section>
+</main>
+<script src="assets/messages.js" defer></script>
+</body></html>
