@@ -81,9 +81,23 @@
       <div class="kpi"><span class="label">Позитивні оцінки</span><strong id="kpi-positive">—</strong><small>Якість відповідей</small></div>
       <div class="kpi"><span class="label">Звернення щодо співпраці · 30 днів</span><strong id="kpi-contacts">—</strong><small>Фактично отримані повідомлення</small></div>
     </div>
-    <div class="panel"><h2>Переходи до співпраці</h2>
-      <p>Після підключення Cloudflare D1 та Turnstile відвідувач зможе надіслати звернення безпосередньо у закритий кабінет. До активації цієї функції форма дозволяє лише копіювати текст. Кількість звернень показує фактично прийняті повідомлення, але не доведену співпрацю чи внески.</p>
-      <p>Серверна форма підтримує підтвердження надсилання й окрему згоду на контакт. Укладені домовленості та внески обліковуються окремо.</p>
+    <div class="panel">
+      <h2>Аналітика приватних діалогів · останні 30 днів</h2>
+      <p>Показники зібрані з технічних даних переписки. Вони не доводять фактичної співпраці та не розкривають текстів особистих повідомлень.</p>
+      <div class="kpis">
+        <div class="kpi"><span class="label">Розпочато діалогів</span><strong id="chat-kpi-threads">—</strong><small>Окремі звернення</small></div>
+        <div class="kpi"><span class="label">Діалоги з відповіддю</span><strong id="chat-kpi-replied">—</strong><small id="chat-kpi-rate">Частка з відповіддю</small></div>
+        <div class="kpi"><span class="label">Ще без відповіді</span><strong id="chat-kpi-pending">—</strong><small>Включно з нещодавніми</small></div>
+        <div class="kpi"><span class="label">Повідомлень</span><strong id="chat-kpi-messages">—</strong><small>Користувачі + адміністратор</small></div>
+        <div class="kpi"><span class="label">Середній час першої відповіді</span><strong id="chat-kpi-latency">—</strong><small>Лише діалоги з відповіддю</small></div>
+        <div class="kpi"><span class="label">Згода на аналіз змісту</span><strong id="chat-kpi-optin">—</strong><small>Необов'язкова, відклична</small></div>
+      </div>
+      <div class="cols">
+        <div class="panel"><h3>Тематика пропозицій</h3><div class="bars" id="chat-interests-chart"></div></div>
+        <div class="panel"><h3>Формати участі</h3><div class="bars" id="chat-intents-chart"></div></div>
+      </div>
+      <div class="panel"><h3>Тематичні точки входу</h3><div class="bars" id="chat-pages-chart"></div></div>
+      <p id="chat-analytics-status" class="note" role="status">Дані з’являться після активації D1 і підключення приватної переписки.</p>
     </div>
   </section>
   <section data-view="contacts" hidden>
@@ -121,7 +135,7 @@
   </section>
   <section data-view="insights" hidden>
     <div class="panel"><h2>Аналітичний звіт ШІ</h2>
-      <p>Звіт будується з реальної статистики та прикладів звернень, тексти яких користувачі дозволили зберігати. Він не змінює Модель, не створює нові епістеми й не публікується автоматично.</p>
+      <p>Звіт поєднує запитання до Оракула, зведені показники приватних діалогів і лише ті фрагменти повідомлень користувачів, для яких окремо надано дозвіл на аналітику. Тексти з переписки без згоди не передаються до ШІ. Звіт не змінює Модель, не створює епістем і не публікується автоматично.</p>
       <button class="primary" id="generate-insights" type="button">Проаналізувати звернення</button>
       <p class="note">Для генерації використовується платний API. Запускайте її лише за потреби.</p>
       <div id="insights-status" class="note" role="status"></div>
