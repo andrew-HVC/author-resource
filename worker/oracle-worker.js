@@ -347,6 +347,9 @@ export default {
       /^(?:(?:а|і|ну)\s+)?[«"“]?[a-zа-яіїєґ0-9/-]{3,45}[»"”]?\s*[?!.]*$/iu.test(question);
     const isConceptRequest =
       /(?:розкаж|поясни|що\s+таке|що\s+означає|яка\s+роль|як\s+працю|як\s+влаштован|як\s+формує|який\s+принцип|у\s+чому\s+полягає|чому\s+саме|з\s+чого\s+склада|про\s+[«"“]|щодо\s+[«"“])/iu.test(question) ||
+      // Distinctive authorial scientific terms should not be hidden by
+      // arbitrary verb-form whitelists in a standalone conceptual question.
+      /антропоном[а-яіїєґ]*|редемпці[а-яіїєґ]*/iu.test(question) ||
       isNakedTermQuestion;
     const canonicalMatches = isConceptRequest
       ? Object.entries(REFERENCE_TITLES).map(entry => {
