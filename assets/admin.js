@@ -69,6 +69,9 @@
    $("kpi-visitors").textContent=formatNum(t.visitors);
    $("kpi-members").textContent=formatNum(t.members);
    $("kpi-tokens").textContent=formatNum(Number(t.input_tokens||0)+Number(t.output_tokens||0));
+   $("kpi-pageviews").textContent=formatNum(t.pageviews);
+   $("kpi-cost").textContent=(typeof t.estimated_cost_usd==="number")?
+     "$"+t.estimated_cost_usd.toFixed(3):"—";
    $("kpi-guests").textContent=formatNum(t.guests);
    $("kpi-members2").textContent=formatNum(t.members);
    $("kpi-optins").textContent=formatNum(t.saved_texts);
