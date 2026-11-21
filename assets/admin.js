@@ -149,6 +149,102 @@
      tr.append(last);root.append(tr);
    }
  }
+
+ // Verified-member collaboration messages; separate from Oracle answer data.
+ let adminChatThreads=[],adminChatId=null,adminChatStatus="open",adminChatLastSeq=0;
+ const chatNotice=msg=>{$("admin-chat-note").textContent=msg||"";};
+ async function chatBadge(){
+   if(!secret)return;
+   try{
+     const data=await req("/admin/chat/unread");
+     const badge=$("admin-chat-count");
+     const unread=Number(data.unread||0);
+     badge.hidden=unread<1;
+     badge.textContent=unread>99?"99+":String(unread);
+   }catch{/* D1 chat migration may still be pending. */}
+ }
+ function renderAdminChatList(){
+   const root=$("admin-chat-threads");root.replaceChildren();
+   if(!adminChatThreads.length){
+     root.append(el("p","Поки немає авторизованих звернень.","note"));return;
+   }
+   for(const item of adminChatThreads){
+     const b=el("button",null,"admin-chat-thread");
+     b.type="button";b.classList.toggle("active",item.id===adminChatId);
+     const top=el("div",null,"admin-chat-thread-top");
+     top.append(el("strong",item.interest||"Звернення"));
+     if(Number(item.unread||0)>0)top.append(el("span",String(item.unread),"admin-chat-badge"));
+     b.append(top);
+     b.append(el("small",(item.email||"")+"\n"+time(item.updated_at)+" · "+(item.status==="closed"?"Закрито":"Відкрито")));
+     b.addEventListener("click",()=>openAdminChat(item.id));
+     root.append(b);
+   }
+ }
+ async function loadAdminChats(){
+   const data=await req("/admin/chat/threads");
+   adminChatThreads=Array.isArray(data.threads)?data.threads:[];
+   renderAdminChatList();await chatBadge();
+   if(!adminChatId&&adminChatThreads.length)await openAdminChat(adminChatThreads[0].id);
+ }
+ async function openAdminChat(id,quiet=false){
+   try{
+     const d=await req("/admin/chat/thread?id="+encodeURIComponent(id));
+     if(!d.thread)throw Error("Діалог не знайдено");
+     const t=d.thread;adminChatId=t.id;adminChatStatus=t.status;
+     $("admin-chat-title").textContent=t.interest||"Діалог";
+     $("admin-chat-details").textContent=(t.email||"")+" · "+(t.intent||"")+" · "+time(t.created_at);
+     const latest=(d.messages||[]).at(-1)?.seq||0;
+     if(!quiet||adminChatLastSeq!==latest){
+       const messages=$("admin-chat-messages");messages.replaceChildren();
+       for(const msg of d.messages||[]){
+         const node=el("article",null,msg.sender==="admin"?"admin-chat-bubble mine":"admin-chat-bubble");
+         node.append(el("strong",msg.sender==="admin"?"Адміністратор":"Користувач"));
+         node.append(el("p",msg.message||""));
+         node.append(el("small",time(msg.created_at)));
+         messages.append(node);
+       }
+       messages.scrollTop=messages.scrollHeight;
+       adminChatLastSeq=latest;
+     }
+     const open=t.status==="open";
+     $("admin-chat-reply").disabled=!open;
+     $("admin-chat-send").disabled=!open;
+     $("admin-chat-status").disabled=false;
+     $("admin-chat-status").textContent=open?"Закрити діалог":"Відкрити діалог";
+     await req("/admin/chat/read",{method:"POST",body:{thread_id:id}});
+     const data=await req("/admin/chat/threads");
+     adminChatThreads=data.threads||[];
+     renderAdminChatList();await chatBadge();
+     if(!quiet)chatNotice("");
+   }catch(e){chatNotice("Не вдалося відкрити діалог: "+e.message)}
+ }
+ async function sendAdminChat(){
+   if(!adminChatId||adminChatStatus!=="open")return;
+   const input=$("admin-chat-reply");
+   const message=input.value.trim();
+   if(!message||message.length>5000){chatNotice("Введіть повідомлення до 5000 символів.");return}
+   $("admin-chat-send").disabled=true;
+   try{
+     const data=await req("/admin/chat/reply",{method:"POST",body:{thread_id:adminChatId,message}});
+     if(!data.sent)throw Error("Повідомлення не надіслано");
+     input.value="";
+     await openAdminChat(adminChatId);
+     chatNotice("Відповідь надіслано. Користувач побачить позначку нового повідомлення.");
+   }catch(e){chatNotice(e.message)}
+   finally{$("admin-chat-send").disabled=adminChatStatus!=="open"}
+ }
+ async function changeAdminChatStatus(){
+   if(!adminChatId)return;
+   const next=adminChatStatus==="open"?"closed":"open";
+   $("admin-chat-status").disabled=true;
+   try{
+     const data=await req("/admin/chat/status",{method:"POST",body:{thread_id:adminChatId,status:next}});
+     if(!data.ok)throw Error("Статус не змінено");
+     await openAdminChat(adminChatId);
+   }catch(e){chatNotice(e.message)}
+   finally{$("admin-chat-status").disabled=false}
+ }
+
  async function exportCSV(){
    const topic=$("question-topic").value;
    const blob=await req("/admin/export?limit=200"+(topic?"&topic="+encodeURIComponent(topic):""),{blob:true});
@@ -260,6 +356,7 @@
    errText("");
    if(id==="questions")loadQuestions().catch(e=>errText(e.message));
    if(id==="contacts")loadContacts().catch(e=>errText(e.message));
+   if(id==="chat")loadAdminChats().catch(e=>errText(e.message));
  }
  async function login(){
    const entered=$("admin-secret").value.trim();
@@ -268,6 +365,7 @@
    $("admin-login").disabled=true;
    try{
      await loadOverview();
+     chatBadge();
      $("admin-secret").value="";
      $("login").hidden=true;$("dashboard").hidden=false;
      $("login-error").textContent="";
@@ -278,7 +376,7 @@
  $("admin-login").addEventListener("click",login);
  $("admin-secret").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
  $("admin-logout").addEventListener("click",()=>{
-   secret="";overview=null;searchRows=[];$("dashboard").hidden=true;
+   secret="";overview=null;searchRows=[];adminChatThreads=[];adminChatId=null;adminChatLastSeq=0;$("dashboard").hidden=true;
    $("login").hidden=false;$("login-error").textContent="";
    $("admin-secret").focus();
  });
@@ -296,5 +394,20 @@
      $("gsc-status").textContent="CSV відкрито локально: "+formatNum(rows.length)+" рядків.";
    }catch(err){$("gsc-status").textContent=err.message;}
  });
+ $("admin-chat-refresh").addEventListener("click",()=>loadAdminChats().catch(e=>chatNotice(e.message)));
+ $("admin-chat-send").addEventListener("click",sendAdminChat);
+ $("admin-chat-status").addEventListener("click",changeAdminChatStatus);
+ setInterval(async()=>{
+   if(!secret||document.visibilityState!=="visible")return;
+   try{
+     await chatBadge();
+     if(!document.querySelector('[data-view="chat"]').hidden){
+       const data=await req("/admin/chat/threads");
+       adminChatThreads=data.threads||[];
+       renderAdminChatList();
+       if(adminChatId)await openAdminChat(adminChatId,true);
+     }
+   }catch{/* Unavailable chat must not hide existing dashboard. */}
+ },30000);
  $("generate-insights").addEventListener("click",report);
 })();
