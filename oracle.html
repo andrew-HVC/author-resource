@@ -31,8 +31,72 @@
 .oracle-embedded #thread{margin-top:10px}
 .oracle-embedded .message{max-width:100%}
 .oracle-embedded .thinking-overlay{position:fixed}
+
+.access-panel{background:#fff;border:1px solid #d6ded8;border-radius:12px;margin:16px 0 18px;padding:14px 17px}
+.access-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:8px}
+.access-bar strong{color:#243f30;font-size:16px}.access-bar span{font-size:12px;color:#5f6f63}
+.access-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.access-tabs button{margin:0;background:#f1f5f1;color:#285e47;border:1px solid #bdcdc1;font-weight:650;font-size:13px;padding:8px 10px}
+.access-tabs button[aria-pressed="true"]{background:#285e47;color:white}
+.access-explanation,.access-privacy{font-size:12px;color:#53665a;margin:8px 0}
+.access-action{margin:8px 0 12px;font-size:14px;padding:9px 12px}
+.access-subtle{background:transparent;border:1px solid #b6cbbd;color:#285e47;margin:3px 6px 6px 0;font-size:12px}
+.access-remaining{color:#295d43;font-weight:650;font-size:13px}
+#access-status{font-size:13px;color:#285e47;min-height:18px;margin:6px 0}
+#access-status[data-state="error"]{color:#943b34}
+#access-member label{font-size:13px;margin:7px 0 4px}
+#access-member input{padding:9px}
+#access-turnstile{margin-top:7px}
+#access-code-wrap{margin-top:9px}
+.access-consent{display:flex;align-items:start;gap:9px;font-size:13px;font-weight:450;margin:10px 0 0}
+.access-consent input{width:auto;flex:none;margin:4px 0 0;accent-color:#285e47}
+#legacy-auth{border:1px solid #d6ded8;padding:8px 12px;border-radius:9px}
+#legacy-auth summary{cursor:pointer;font-size:12px;color:#53665a}
+.oracle-feedback{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;border-top:1px solid #e1e8e2;margin-top:12px;padding-top:8px;color:#58675e}
+.oracle-feedback button{margin:0;padding:4px 9px;background:#f1f5f1;color:#285e47;border:1px solid #bdcfc2;border-radius:6px;font-size:12px}
+.oracle-embedded #legacy-auth{margin:6px 0}
+.oracle-embedded #access-panel{margin:0 0 12px}
+.oracle-embedded #access-guest .access-action{margin:4px 0 9px}
+@media(max-width:550px){.access-panel{padding:12px}.access-tabs{gap:5px}.access-tabs button{font-size:12px;padding:7px 8px}}
 </style><script>if(new URLSearchParams(location.search).get("embedded")==="1"){document.documentElement.classList.add("oracle-embedded");}</script></head>
-<body><main><a href="model.html">← До Моделі середовища</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі матеріалів Моделі середовища. Оракул враховує контекст попередніх реплік.</p><div class="auth-settings"><label for="token">Тестовий пароль</label><input type="password" id="token" form="form" autocomplete="off" required minlength="24"><small>Введіть ORACLE_TEST_TOKEN, а не ключ OpenAI. Пароль не записується в код чи сховище сайту.</small></div><h2>Діалог</h2><div id="thread" aria-live="polite" aria-label="Історія діалогу"><p class="empty">Тут з’являться запитання та відповіді.</p></div><form id="form" class="composer"><label id="question-label" for="question">Ваше запитання Оракулу</label><textarea id="question" rows="7" required maxlength="4000" placeholder="Поставте запитання своїми словами…"></textarea><small>Можна поставити власне запитання або обрати одну з плашок вище. Контекст діалогу зберігається. Enter — надіслати, Shift+Enter — новий рядок.</small><button id="send" type="submit">Запитати Оракула</button></form><div id="result" role="status" aria-live="polite"></div><button id="restart" type="button" class="secondary">Новий діалог</button><p><small>Пам’ять діалогу: до 6 останніх обмінів. Історія не записується у сховище браузера та зникає після оновлення сторінки або закриття вкладки.</small></p><p><small>Запити та попередні репліки передаються через Cloudflare до OpenAI. Не вводьте конфіденційних відомостей. Кожен успішний запит використовує баланс API.</small></p></main><div id="thinking" class="thinking-overlay" role="status" aria-live="polite" aria-atomic="true" hidden><div class="thinking-card"><div class="thinking-dots" aria-hidden="true"><span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span></div><div class="thinking-label">Оракул думає…</div></div></div><script>
+<body><main><a href="model.html">← До Моделі середовища</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі матеріалів Моделі середовища. Оракул враховує контекст попередніх реплік.</p><section id="access-panel" class="access-panel" aria-label="Доступ до Оракула">
+  <div class="access-bar"><strong>Доступ до Оракула</strong><span id="access-identity">Тестовий режим</span></div>
+  <div class="access-tabs" id="access-tabs" role="group" aria-label="Спосіб входу">
+    <button type="button" data-mode="guest" aria-pressed="false">Гість · 5 запитань</button>
+    <button type="button" data-mode="member" aria-pressed="false">Увійти / Зареєструватися</button>
+    <button type="button" data-mode="legacy" aria-pressed="true">Тестовий пароль</button>
+  </div>
+  <div id="access-guest" hidden>
+    <p class="access-explanation">Одна пробна сесія без реєстрації. Після її завершення для продовження потрібно увійти через email.</p>
+    <button type="button" id="access-start-guest" class="access-action">Розпочати або продовжити гостьову сесію</button>
+  </div>
+  <div id="access-member" hidden>
+    <div id="access-signin-fields">
+      <label for="access-email">Ваша електронна пошта</label>
+      <input id="access-email" type="email" maxlength="254" autocomplete="email" placeholder="email@example.com">
+      <button type="button" id="access-start-email" class="access-action">Отримати код для входу</button>
+      <div id="access-code-wrap" hidden>
+        <label for="access-code">Шестизначний код із листа</label>
+        <input id="access-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+        <button type="button" id="access-verify-email" class="access-action">Підтвердити вхід</button>
+      </div>
+    </div>
+    <div id="access-signed-in" hidden>
+      <p>Ви увійшли до Оракула.</p>
+      <button type="button" id="access-logout" class="access-subtle">Вийти</button>
+      <button type="button" id="access-delete" class="access-subtle">Видалити обліковий запис і дані</button>
+    </div>
+  </div>
+  <div id="access-turnstile" aria-label="Захист пробного входу від автоматичних запитів"></div>
+  <p id="access-config-note" class="access-explanation"></p>
+  <p id="access-remaining" class="access-remaining"></p>
+  <p id="access-status" role="status" aria-live="polite">Перевіряємо доступні способи входу…</p>
+  <label class="access-consent">
+    <input type="checkbox" id="access-consent">
+    Дозволяю зберігати текст моїх запитань і відповідей до 30 днів для аналізу та покращення Оракула.
+  </label>
+  <p class="access-privacy">Без цієї згоди зберігаються лише технічні показники та тематична категорія звернення. Не вводьте конфіденційні дані. Публікація запитань не передбачена.</p>
+</section><details id="legacy-auth"><summary>Службовий тестовий доступ</summary><div class="auth-settings"><label for="token">Тестовий пароль</label><input type="password" id="token" form="form" autocomplete="off" required minlength="24"><small>Введіть ORACLE_TEST_TOKEN, а не ключ OpenAI. Пароль не записується в код чи сховище сайту.</small></div></details><h2>Діалог</h2><div id="thread" aria-live="polite" aria-label="Історія діалогу"><p class="empty">Тут з’являться запитання та відповіді.</p></div><form id="form" class="composer"><label id="question-label" for="question">Ваше запитання Оракулу</label><textarea id="question" rows="7" required maxlength="4000" placeholder="Поставте запитання своїми словами…"></textarea><small>Можна поставити власне запитання або обрати одну з плашок вище. Контекст діалогу зберігається. Enter — надіслати, Shift+Enter — новий рядок.</small><button id="send" type="submit">Запитати Оракула</button></form><div id="result" role="status" aria-live="polite"></div><button id="restart" type="button" class="secondary">Новий діалог</button><p><small>Пам’ять діалогу: до 6 останніх обмінів. Історія не записується у сховище браузера та зникає після оновлення сторінки або закриття вкладки.</small></p><p><small>Запити та попередні репліки передаються через Cloudflare до OpenAI. Не вводьте конфіденційних відомостей. Кожен успішний запит використовує баланс API.</small></p></main><div id="thinking" class="thinking-overlay" role="status" aria-live="polite" aria-atomic="true" hidden><div class="thinking-card"><div class="thinking-dots" aria-hidden="true"><span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span></div><div class="thinking-label">Оракул думає…</div></div></div><script src="assets/oracle-auth.js"></script><script>
 const form = document.getElementById("form");
 const token = document.getElementById("token");
 const question = document.getElementById("question");
@@ -294,7 +358,7 @@ async function askOracle(q, route = null) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + token.value
+        "Authorization": "Bearer " + (window.OracleAccess?.credential?.() || token.value)
       },
       body: JSON.stringify({
         question: q, navigation_route: route, history: history.slice(-12),
@@ -303,7 +367,9 @@ async function askOracle(q, route = null) {
         engagement_shown: engagementShown,
         demo_engagement_shown: demoEngagementShown,
         source_issue_keys: [...offeredIssueKeys].slice(-40),
-        contextual_followup: route === null && history.length > 0
+        contextual_followup: route === null && history.length > 0,
+        analytics_consent:window.OracleAccess?.consent?.()===true,
+        source_page:window.OracleAccess?.source?.()||"oracle"
       }),
       cache: "no-store",
       credentials: "omit",
@@ -311,6 +377,7 @@ async function askOracle(q, route = null) {
     });
     const data = await response.json();
     if (!response.ok) {
+      window.OracleAccess?.onError?.(response.status,data.error||"");
       status.textContent = "Помилка " + response.status + ": " +
         (data.error || "Запит не виконано") +
         (data.status ? " (API: " + data.status + ")" : "");
@@ -332,6 +399,8 @@ async function askOracle(q, route = null) {
       q,
       typeof data.engagement_mode === "string" ? data.engagement_mode : "none",
       data.source_issue && typeof data.source_issue === "object" ? data.source_issue : null);
+    window.OracleAccess?.onAnswer?.(data);
+    window.OracleAccess?.feedback?.(latestAnswer,data.answer_id);
     // Keep reading position at the START of the new answer,
     // not at the old question field or the end of the reply.
     latestAnswer.tabIndex = -1;
