@@ -7,6 +7,7 @@
  *   ORACLE_TEST_TOKEN     (Secret)
  *   ORACLE_VECTOR_STORE_ID (Text)
  */
+import { dispatchPortalRequest, authorizeOracleRequest, recordOracleAnswer, retentionCleanup } from "./oracle-portal.js";
 const SITE_ORIGIN = "https://andrew-hvc.github.io";
 
 // Verified titles from the two clean Atlas volumes and the 88-item
@@ -209,7 +210,7 @@ function publicReferenceText(value) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin");
     const cors = {
       "Access-Control-Allow-Origin": SITE_ORIGIN,
@@ -218,16 +219,42 @@ export default {
       "Cache-Control": "no-store",
       "Vary": "Origin"
     };
-    const json = (body, status = 200) => new Response(JSON.stringify(body), {
-      status,
-      headers: { ...cors, "Content-Type": "application/json; charset=utf-8" }
-    });
+    let auditContext = null;
+    let apiUsage = null;
+    const json = (body, status = 200) => {
+      if (status === 200 && body && typeof body.answer === "string" && auditContext) {
+        const answerId = crypto.randomUUID();
+        body.answer_id = answerId;
+        if (auditContext.remaining !== null) body.remaining = auditContext.remaining;
+        if (env.DB && ctx && typeof ctx.waitUntil === "function") {
+          ctx.waitUntil(recordOracleAnswer(env, {
+            access: auditContext, question: auditContext.question,
+            body: auditContext.body, answer: body.answer,
+            usage: apiUsage, id: answerId
+          }).catch(() => {}));
+        }
+      }
+      return new Response(JSON.stringify(body), {
+        status,
+        headers: { ...cors, "Content-Type": "application/json; charset=utf-8" }
+      });
+    };
 
     if (origin && origin !== SITE_ORIGIN)
       return new Response("Origin not allowed", { status: 403 });
 
     if (request.method === "OPTIONS")
       return new Response(null, { status: 204, headers: cors });
+    // Portal routes are server-authorized, never served from public HTML alone.
+    if (new URL(request.url).pathname.startsWith("/access/") ||
+        new URL(request.url).pathname.startsWith("/admin/")) {
+      try {
+        const portal = await dispatchPortalRequest(request, env, ctx, cors);
+        if (portal) return portal;
+      } catch {
+        return json({ error: "Portal is temporarily unavailable" }, 503);
+      }
+    }
 
     if (request.method === "GET")
       return new Response("ORACLE API is online", {
@@ -236,10 +263,6 @@ export default {
 
     if (request.method !== "POST")
       return json({ error: "Method not allowed" }, 405);
-
-    if (!env.ORACLE_TEST_TOKEN ||
-        request.headers.get("Authorization") !== "Bearer " + env.ORACLE_TEST_TOKEN)
-      return json({ error: "Access denied" }, 401);
 
     if (!env.OPENAI_API_KEY || !env.ORACLE_VECTOR_STORE_ID)
       return json({ error: "Server configuration error" }, 500);
@@ -258,6 +281,16 @@ export default {
     const question = typeof body?.question === "string" ? body.question.trim() : "";
     if (!question || question.length > 4000)
       return json({ error: "Question must contain 1–4000 characters" }, 400);
+
+    // Require quota-controlled access BEFORE running retrieval or the LLM.
+    // Legacy test authentication remains available only with its private secret.
+    try {
+      const access = await authorizeOracleRequest(request, env);
+      if (!access.ok) return json({ error: access.error }, access.status || 401);
+      auditContext = { ...access, question, body };
+    } catch {
+      return json({ error: "Access verification failed" }, 503);
+    }
 
     // Identity is intentionally private. Handle direct questions deterministically:
     // do not let retrieval, model inference or source metadata reveal a person.
@@ -1561,6 +1594,7 @@ export default {
     let data;
     try {
       data = await response.json();
+      apiUsage = data.usage || null;
     } catch {
       return json({ error: "Invalid upstream response" }, 502);
     }
@@ -2221,5 +2255,8 @@ export default {
       source_issue_key: inviteToResolveIssue ? issueKey : "",
       truncated
     });
+  },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(retentionCleanup(env).catch(() => {}));
   }
 };
