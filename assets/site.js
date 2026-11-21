@@ -46,25 +46,16 @@
     async function recordAndLoad(){
       let identifier=null;
       try{identifier=visitorId();}catch{/* Private storage may be blocked. */}
-      const marker="ms-public-pageview-v1:"+currentPage+":"+
-        new Date().toISOString().slice(0,10);
+      // Each page load is a view; stable browser ID is deduplicated in D1.
       if(identifier){
-        let already=false;
-        try{already=sessionStorage.getItem(marker)==="1";}catch{}
-        if(!already){
-          try{
-            const response=await fetch(API+"/access/pageview",{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify({source_page:currentPage,visitor_id:identifier}),
-              cache:"no-store"
-            });
-            if(response.ok){
-              stats=await response.json();
-              try{sessionStorage.setItem(marker,"1");}catch{}
-            }
-          }catch{/* The public page remains readable during outages. */}
-        }
+        try{
+          const response=await fetch(API+"/access/pageview",{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({source_page:currentPage,visitor_id:identifier}),
+            cache:"no-store"
+          });
+          if(response.ok)stats=await response.json();
+        }catch{/* The public page remains readable during outages. */}
       }
       if(!stats){
         try{
