@@ -1,5 +1,21 @@
 (function(){
   "use strict";
+  // Aggregate public pageviews without cookies, names or IP storage.
+  // A single event per thematic page per tab/day avoids accidental double counting.
+  const currentPage=location.pathname.endsWith("/feniks.html")?"feniks":
+    location.pathname.endsWith("/demo.html")?"demo":
+    location.pathname.endsWith("/model.html")?"model":null;
+  if(currentPage){
+    try{
+      const marker="oracle-pageview:"+currentPage+":"+new Date().toISOString().slice(0,10);
+      if(!sessionStorage.getItem(marker)){
+        fetch("https://oracle-api.andrewdonenko.workers.dev/access/pageview",{
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({source_page:currentPage}),keepalive:true
+        }).then(response=>{if(response.ok)sessionStorage.setItem(marker,"1");}).catch(()=>{});
+      }
+    }catch{/* Visit analytics must not interrupt the public content. */}
+  }
   // The same Oracle test interface is displayed inside a single retained iframe.
   // Keeping the iframe mounted when folded preserves the active dialog on this page.
   const oracleShell=document.querySelector("[data-oracle-shell]");
