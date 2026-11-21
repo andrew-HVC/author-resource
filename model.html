@@ -30,18 +30,24 @@
   </div>
 
 <div class="oracle-toolbar" aria-label="Доступ до Оракула">
-  <button class="oracle-trigger shell" data-oracle-trigger type="button" aria-controls="oracle-drawer" aria-expanded="false">
-    <span class="oracle-trigger-icon" aria-hidden="true">?</span>
-    <span class="oracle-trigger-main">Задати питання Оракулу</span>
-    <span class="oracle-trigger-hint">Питання під час читання — без переходу на іншу сторінку</span>
-    <span class="oracle-trigger-chevron" aria-hidden="true">⌄</span>
-  </button>
+  <div class="oracle-toolbar-inner shell">
+    <button class="oracle-trigger" data-oracle-trigger type="button" aria-controls="oracle-drawer" aria-expanded="false">
+      <span class="oracle-trigger-icon" aria-hidden="true">?</span>
+      <span class="oracle-trigger-main">Задати питання Оракулу</span>
+      <span class="oracle-trigger-hint">Питання під час читання — без переходу на іншу сторінку</span>
+      <span class="oracle-trigger-chevron" aria-hidden="true">⌄</span>
+    </button>
+    <a class="oracle-standalone-link" href="oracle.html?source=model" target="_blank" rel="noopener noreferrer" aria-label="Відкрити Оракула в окремій вкладці">
+      <span aria-hidden="true">↗</span><span>Окрема сторінка</span>
+    </a>
+  </div>
 </div>
 <div class="oracle-drawer" id="oracle-drawer" data-oracle-drawer hidden role="region" aria-label="Оракул — діалог про Модель середовища">
   <div class="oracle-drawer-inner">
     <div class="oracle-drawer-top">
       <strong>Оракул</strong>
-      <span>Тестова версія · для запитань потрібен тестовий пароль</span>
+      <span>Оракул · діалогове дослідження</span>
+      <a class="oracle-drawer-open" href="oracle.html?source=model" target="_blank" rel="noopener noreferrer" aria-label="Відкрити Оракула в окремій вкладці">У новій вкладці ↗</a>
       <button class="oracle-close" type="button" data-oracle-close aria-label="Згорнути Оракула">Згорнути ×</button>
     </div>
     <iframe class="oracle-frame" data-oracle-frame title="Інтерактивний діалог з Оракулом" src="about:blank" loading="lazy"></iframe>
@@ -136,7 +142,7 @@
         <div class="card-grid">
           <article class="info-card"><div class="meta">Застосування до конкретного виклику</div><h3>Проєкт «Фенікс»</h3><p>Альтернативне цілісне проєктування територій, тотально або майже тотально зруйнованих війною.</p><p style="margin-top:14px"><a href="feniks.html">Дослідити проблему →</a></p></article>
           <article class="info-card"><div class="meta">Етап залучення та перевірки</div><h3>Демонстраційна модель</h3><p>Від фахової перевірки і передпроєктних матеріалів до інтегрованої цифрової системи.</p><p style="margin-top:14px"><a href="demo.html">До Демонстраційної моделі →</a></p></article>
-          <article class="info-card"><div class="meta">Інтерактивне дослідження</div><h3>Оракул</h3><p>Діалогова система на основі авторських матеріалів. Поточна версія проходить тестування.</p><p style="margin-top:14px"><a href="oracle.html">Перейти до Оракула →</a></p></article>
+          <article class="info-card"><div class="meta">Інтерактивне дослідження</div><h3>Оракул</h3><p>Діалогова система на основі авторських матеріалів. Поточна версія проходить тестування.</p><p style="margin-top:14px"><a href="oracle.html?source=model" target="_blank" rel="noopener noreferrer">Відкрити Оракула в окремій вкладці ↗</a></p></article>
           <article class="info-card"><div class="meta">Наявний публічний ресурс</div><h3>Сайт-візитка Моделі</h3><p>Базові матеріали про природні умови, екологію, енергетику, інфраструктуру й типологію.</p><p style="margin-top:14px"><a href="https://archeonomus.tilda.ws/" target="_blank" rel="noopener noreferrer">Відкрити зовнішній сайт ↗</a></p></article>
         </div>
         <p class="note">Понятійні першоджерела цього огляду: МС-004 «Що таке Модель середовища», МС-007 «Людський потенціал як первинний критерій якості середовища», МС-053 «Екосистема розвитку Моделі», МС-051 «Проєкт „Фенікс“», АТ-001 «Модель середовища». Повні тексти публікуватимуться окремими інформаційними об'єктами.</p>
