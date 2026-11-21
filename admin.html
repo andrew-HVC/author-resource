@@ -25,6 +25,7 @@
       <button type="button" data-tab="search" role="tab" aria-selected="false">Пошуковий попит</button>
       <button type="button" data-tab="engagement" role="tab" aria-selected="false">Залучення</button>
       <button type="button" data-tab="contacts" role="tab" aria-selected="false">Звернення</button>
+      <button type="button" data-tab="chat" role="tab" aria-selected="false">Діалоги <span id="admin-chat-count" class="admin-chat-badge" hidden></span></button>
       <button type="button" data-tab="insights" role="tab" aria-selected="false">Аналітичний звіт</button>
     </div>
     <button id="admin-logout" class="secondary" type="button">Вийти</button>
@@ -93,7 +94,29 @@
         <thead><tr><th>Дата</th><th>Тема</th><th>Формат</th><th>Email</th><th>Текст звернення</th><th>Статус</th><th>Дія</th></tr></thead>
         <tbody id="contact-rows"><tr><td colspan="7">Поки немає завантажених звернень.</td></tr></tbody>
       </table></div>
-      <p class="note">Надсилання відповіді користувачу через кабінет не реалізоване. Для відповіді використовуйте контактну адресу, яку користувач надав добровільно.</p>
+      <p class="note">Це архів старої форми, яка не вимагала авторизації. Такі звернення не можна автоматично перетворити на особисті діалоги, оскільки email не був підтверджений. Нові звернення приймаються в розділі «Діалоги» після входу користувача.</p>
+    </div>
+  </section>
+  <section data-view="chat" hidden>
+    <div class="panel">
+      <h2>Приватні діалоги щодо співпраці</h2>
+      <p>Тільки авторизовані користувачі з підтвердженою електронною адресою можуть розпочати переписку. Ваші відповіді відображатимуться в їхньому кабінеті повідомлень. Відмітка непрочитаного з'явиться автоматично.</p>
+      <button class="primary" id="admin-chat-refresh" type="button">Оновити діалоги</button>
+      <div class="admin-chat-layout">
+        <div class="admin-chat-sidebar" id="admin-chat-threads" role="list" aria-label="Діалоги">Діалоги ще не завантажено.</div>
+        <div class="admin-chat-main">
+          <div class="admin-chat-heading"><h3 id="admin-chat-title">Оберіть діалог</h3><p id="admin-chat-details"></p></div>
+          <div id="admin-chat-messages" class="admin-chat-messages" aria-live="polite"></div>
+          <label for="admin-chat-reply">Відповідь користувачу</label>
+          <textarea id="admin-chat-reply" rows="4" maxlength="5000" placeholder="Напишіть відповідь у приватному діалозі…" disabled></textarea>
+          <div class="admin-chat-actions">
+            <button class="primary" type="button" id="admin-chat-send" disabled>Надіслати відповідь</button>
+            <button class="secondary" type="button" id="admin-chat-status" disabled>Закрити діалог</button>
+          </div>
+          <p id="admin-chat-note" class="note" role="status"></p>
+        </div>
+      </div>
+      <p class="note">Нові повідомлення можуть надходити у вигляді email-сповіщень на вашу приватну адресу після налаштування <code>ADMIN_NOTIFY_EMAIL</code>. Лист не містить тексту переписки або персональних даних.</p>
     </div>
   </section>
   <section data-view="insights" hidden>
