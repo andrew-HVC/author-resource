@@ -9,18 +9,24 @@
 <a class="brand" href="model.html">АВТОРСЬКИЙ РЕСУРС<span>Мережа концепцій і розробок</span></a><nav class="site-nav" aria-label="Відкриті тематичні сторінки"><a href="model.html">Модель середовища</a><a href="feniks.html" aria-current="page">Фенікс</a><a href="demo.html">Демонстраційна модель</a></nav>
 </div>
 <div class="oracle-toolbar" aria-label="Доступ до Оракула">
-  <button class="oracle-trigger shell" data-oracle-trigger type="button" aria-controls="oracle-drawer" aria-expanded="false">
-    <span class="oracle-trigger-icon" aria-hidden="true">?</span>
-    <span class="oracle-trigger-main">Задати питання Оракулу</span>
-    <span class="oracle-trigger-hint">Питання під час читання — без переходу на іншу сторінку</span>
-    <span class="oracle-trigger-chevron" aria-hidden="true">⌄</span>
-  </button>
+  <div class="oracle-toolbar-inner shell">
+    <button class="oracle-trigger" data-oracle-trigger type="button" aria-controls="oracle-drawer" aria-expanded="false">
+      <span class="oracle-trigger-icon" aria-hidden="true">?</span>
+      <span class="oracle-trigger-main">Задати питання Оракулу</span>
+      <span class="oracle-trigger-hint">Питання під час читання — без переходу на іншу сторінку</span>
+      <span class="oracle-trigger-chevron" aria-hidden="true">⌄</span>
+    </button>
+    <a class="oracle-standalone-link" href="oracle.html?source=feniks" target="_blank" rel="noopener noreferrer" aria-label="Відкрити Оракула в окремій вкладці">
+      <span aria-hidden="true">↗</span><span>Окрема сторінка</span>
+    </a>
+  </div>
 </div>
 <div class="oracle-drawer" id="oracle-drawer" data-oracle-drawer hidden role="region" aria-label="Оракул — діалог про Модель середовища">
   <div class="oracle-drawer-inner">
     <div class="oracle-drawer-top">
       <strong>Оракул</strong>
-      <span>Тестова версія · для запитань потрібен тестовий пароль</span>
+      <span>Оракул · діалогове дослідження</span>
+      <a class="oracle-drawer-open" href="oracle.html?source=feniks" target="_blank" rel="noopener noreferrer" aria-label="Відкрити Оракула в окремій вкладці">У новій вкладці ↗</a>
       <button class="oracle-close" type="button" data-oracle-close aria-label="Згорнути Оракула">Згорнути ×</button>
     </div>
     <iframe class="oracle-frame" data-oracle-frame title="Інтерактивний діалог з Оракулом" src="about:blank" loading="lazy"></iframe>
