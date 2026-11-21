@@ -60,3 +60,34 @@ h3{font-size:20px;line-height:1.3;letter-spacing:-.01em;margin:0 0 12px}p{margin
 @media(max-width:950px){.hero-inner{grid-template-columns:1fr;gap:20px}.hero-aside{max-width:610px}.page-layout{grid-template-columns:1fr;gap:24px}.toc{position:static;display:flex;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:20px}.toc p{width:100%;margin:0}.toc a{display:inline-block}.sequence{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.shell{padding:0 18px}.header-inner{align-items:start;padding:17px 0;flex-direction:column;gap:13px}.site-nav{gap:13px}.hero{padding:42px 0}.hero-inner{gap:26px}.hero-aside{padding:20px}.card-grid,.footer-grid{grid-template-columns:1fr}.sequence{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.step{min-height:112px;padding:13px}.page-layout{padding-top:28px;padding-bottom:35px}.content-section{padding-bottom:30px;margin-bottom:33px}.join{padding:23px}.form-panel{padding:17px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+
+/* Постійна панель навігації та інтегрований випадаючий Оракул. */
+.site-header{position:sticky;top:0;z-index:200;box-shadow:0 3px 16px rgba(23,61,48,.07)}
+.oracle-toolbar{background:#6750a4;color:#fff;position:relative}
+.oracle-trigger{appearance:none;display:flex;align-items:center;gap:15px;width:100%;min-height:54px;padding:10px 28px;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
+.oracle-trigger:hover,.oracle-trigger[aria-expanded="true"]{background:#594093}
+.oracle-trigger:focus-visible{outline:3px solid #f5d6ff;outline-offset:-5px}
+.oracle-trigger-icon{display:grid;place-items:center;flex:none;width:31px;height:31px;border-radius:50%;border:1px solid rgba(255,255,255,.75);font-weight:800;font-size:18px;line-height:1}
+.oracle-trigger-main{font-weight:750;letter-spacing:.01em;font-size:16px}
+.oracle-trigger-hint{margin-left:auto;color:#efe8ff;font-size:13px}
+.oracle-trigger-chevron{flex:none;font-size:20px;line-height:1;transition:transform .18s ease}
+.oracle-trigger[aria-expanded="true"] .oracle-trigger-chevron{transform:rotate(180deg)}
+.oracle-drawer[hidden]{display:none}
+.oracle-drawer{position:absolute;top:100%;left:0;right:0;z-index:210;height: min(730px, calc(100dvh - var(--oracle-header-height, 140px) - 8px));min-height:200px;background:transparent;padding:0 max(18px,calc((100vw - 1080px)/2));filter:drop-shadow(0 19px 22px rgba(24,24,38,.2))}
+.oracle-drawer-inner{height:100%;display:flex;flex-direction:column;background:#fff;border:1px solid #d7dce0;border-top:0;border-radius:0 0 12px 12px;overflow:hidden}
+.oracle-drawer-top{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid #e2e5e6;background:#fafaf9;flex:none}
+.oracle-drawer-top strong{font-size:15px}
+.oracle-drawer-top span{font-size:12px;color:#56665e;margin-right:auto}
+.oracle-close{border:1px solid #c8d2cc;color:#294637;background:#fff;padding:7px 13px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+.oracle-close:hover{background:#ebf1ec}
+.oracle-frame{display:block;flex:1;min-height:0;width:100%;border:0;background:#f8f8f4}
+@media(max-width:750px){
+  .oracle-trigger{padding:9px 18px;min-height:52px;gap:11px}
+  .oracle-trigger-hint{display:none}
+  .oracle-trigger-main{font-size:15px}
+  .oracle-drawer{padding:0 6px}
+  .oracle-drawer-top{padding:8px 11px;flex-wrap:wrap}
+  .oracle-drawer-top span{display:none}
+}
+@media(prefers-reduced-motion:reduce){.oracle-trigger-chevron{transition:none}}
