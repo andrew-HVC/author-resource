@@ -68,8 +68,15 @@
 .oracle-focus-actions a,.oracle-focus-actions button{font:inherit;font-size:12px;font-weight:680;background:#fff;border:1px solid #b8cdbd;border-radius:6px;color:#27533a;text-decoration:none;padding:7px 10px;cursor:pointer}
 .oracle-focus-actions a:hover,.oracle-focus-actions button:hover{background:#e1ece3}
 .oracle-embedded .oracle-focus-panel{margin:0 0 11px;padding:9px 12px}
+.oracle-top-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.oracle-top-nav a{font-size:13px}
+.oracle-chat-link{display:inline-flex;align-items:center;gap:5px;font-weight:750;border:1px solid #cbd9cd;border-radius:6px;padding:6px 10px;text-decoration:none;color:#27533a}
+.oracle-chat-link .site-chat-badge{background:#a34121;border-radius:12px;color:#fff;padding:2px 6px;font-size:11px}
+.oracle-chat-link .site-chat-badge[hidden]{display:none}
+.oracle-embedded .oracle-top-nav{justify-content:flex-end;margin-bottom:5px}
+.oracle-embedded .oracle-top-nav>a:first-child{display:none}
 </style><script>if(new URLSearchParams(location.search).get("embedded")==="1"){document.documentElement.classList.add("oracle-embedded");}</script></head>
-<body><main><a href="model.html">← До Моделі середовища</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі матеріалів Моделі середовища. Оракул враховує контекст попередніх реплік.</p><section class="oracle-focus-panel" id="oracle-focus-panel" hidden aria-label="Обрана тема дослідження">
+<body><main><div class="oracle-top-nav"><a href="model.html">← До Моделі середовища</a><a class="oracle-chat-link" href="messages.html" data-chat-link>Повідомлення <span class="site-chat-badge" data-chat-badge hidden></span></a></div><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі матеріалів Моделі середовища. Оракул враховує контекст попередніх реплік.</p><section class="oracle-focus-panel" id="oracle-focus-panel" hidden aria-label="Обрана тема дослідження">
   <div class="oracle-focus-info">
     <small>Предметне дослідження</small>
     <strong id="oracle-focus-title">Обраний матеріал</strong>
@@ -544,4 +551,4 @@ restart.addEventListener("click", () => {
   question.placeholder = "Поставте запитання своїми словами…";
   question.focus();
 });
-</script></body></html>
+</script><script src="assets/chat-badge.js" defer></script></body></html>
