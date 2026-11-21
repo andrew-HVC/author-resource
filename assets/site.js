@@ -25,8 +25,7 @@
       if(stats&&note){
         const date=stats.started_at?
           new Date(stats.started_at*1000).toLocaleDateString("uk-UA"):"дня запуску";
-        note.textContent="Облік із "+date+
-          ". Унікальні — різні браузери з постійним випадковим ідентифікатором, не окремі люди.";
+        note.textContent="Облік із "+date+" · Унікальні — браузери, не окремі люди.";
       }
     }
     for(const button of modes)button.addEventListener("click",()=>{
@@ -65,7 +64,7 @@
         }catch{}
       }
       if(!stats&&note)note.textContent=
-        "Статистика стане доступною після підключення Cloudflare D1. Показники поки не сформовані.";
+        "Дані з’являться після підключення статистики.";
       render();
     }
     recordAndLoad();
