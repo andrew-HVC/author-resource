@@ -1562,6 +1562,28 @@ export default {
     while (answerLines.length > 1 && isNavigationParagraph(answerLines[answerLines.length - 1]))
       answerLines.pop();
     let answer = answerLines.join("\n\n").trim();
+    // Fundamental-theory requests must not silently omit Anthroponomics.
+    // This minimal canonical bridge is used only if model generation omitted
+    // it, never on generic economics or a narrow KWATT definition question.
+    if (asksEconomicFoundations && answer &&
+        !/антропоном[а-яіїєґ]*/iu.test(answer)) {
+      const theoreticalBridge = [
+        "**Теоретична основа — антропономіка.**",
+        "У Моделі середовища людина розглядається як виток",
+        "економічної вартості через потреби, запити, рішення",
+        "та участь у продуктивних процесах.",
+        "Антропономіка оцінює вплив середовища, економічних",
+        "процесів і суспільної організації на збереження та",
+        "реалізацію людського потенціалу — не «вартість людини».",
+        "Фрактальна економіка описує структурне ускладнення",
+        "потреб, виробничих спроможностей та взаємних впливів;",
+        "прямий облік, KWATT і редемпція належать до механізмів",
+        "економічного представлення та виконання прав, а не",
+        "замінюють антропономічний фундамент."
+      ].join(" ");
+      answer = theoreticalBridge + "\n\n" + answer;
+    }
+
     // Source-backed safety check for a particular known definition mismatch:
     // compatibility of private ownership with shared obligations does NOT
     // resolve the different Atlas and episteme classification criteria.
@@ -1742,7 +1764,9 @@ export default {
     // A conceptual route must gain altitude. An initial building-level
     // discussion becomes a system-level question; the next opt-in choice
     // explicitly opens structural alternatives without naming the Model yet.
-    const conceptualNext = phase === "open" && topic === "economy"
+    const conceptualNext = asksEconomicFoundations
+      ? "Як антропономіка пов’язує людський потенціал із походженням економічної вартості?"
+      : phase === "open" && topic === "economy"
       ? "Як якісно нові потреби та виробничі можливості взаємно змінюють структуру економічної системи?"
       : phase === "systems" && topic === "economy"
       ? "Які альтернативні принципи економічної організації можуть узгоджувати потреби, виробництво та облік вартості?"
@@ -1765,7 +1789,9 @@ export default {
       : phase === "model" && topic === "recovery"
       ? "Як у Моделі середовища екологічні умови визначають енергетику, інфраструктуру й розселення?"
       : null;
-    const practicalNext = phase === "open" && topic === "economy"
+    const practicalNext = asksEconomicFoundations
+      ? "Як перевірити вплив економічних рішень Моделі на збереження та реалізацію людського потенціалу?"
+      : phase === "open" && topic === "economy"
       ? "Як взаємні зміни попиту й пропозиції вплинуть на виробничі ланцюги та можливості підприємств?"
       : phase === "systems" && topic === "economy"
       ? "За якими економічними показниками порівняти різні механізми узгодження потреб і виробництва?"
