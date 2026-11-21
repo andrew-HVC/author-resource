@@ -583,12 +583,25 @@ async function chatAnalysisConsent(env,who,body,cors){
   return obj(cors,{ok:!!r.meta?.changes,analysis_consent:yes===1},r.meta?.changes?200:404);
 }
 
+// Controlled taxonomies prevent personal text being smuggled into
+// supposedly aggregate, non-consented analytics labels.
+const CHAT_INTERESTS = new Set([
+  "Модель середовища","Проєкт «Фенікс»","Демонстраційна модель"
+]);
+const CHAT_INTENTS = new Set([
+  "Професійна дискусія та критика","Пропозиція компетенцій",
+  "Дослідницькі дані та методики","Інженерні розрахунки",
+  "Цифрове моделювання","Організаційна участь",
+  "Цільове фінансування","Ознайомлення з матеріалами"
+]);
+
 async function chatStart(env,who,body,cors,ctx){
   if(body?.contact_consent!==true)return bad(cors,"Consent is required for collaboration messages",400);
   const source=originPage(body.source_page);
   const interest=chatTitle(body.interest),intent=chatTitle(body.intent);
   const message=typeof body.message==="string"?body.message.trim():"";
-  if(source==="unknown"||!interest||!intent||!chatMessageOk(message))
+  if(source==="unknown"||!CHAT_INTERESTS.has(interest)||!CHAT_INTENTS.has(intent)||
+     !chatMessageOk(message))
     return bad(cors,"Invalid conversation details",400);
   const recent=await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM collaboration_threads WHERE user_id=? AND created_at>=?"
