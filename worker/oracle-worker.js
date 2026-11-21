@@ -411,7 +411,7 @@ export default {
     // Foundational economic questions must retrieve the source theory,
     // not only downstream accounting and production mechanisms.
     const asksEconomicFoundations =
-      /(?:економічн[а-яіїєґ]*\s+(?:теорі|концепц|засад|основ|філософ|парадигм)|теоретичн[а-яіїєґ]*\s+(?:основ|засад)[а-яіїєґ]*.{0,90}економ|на\s+яких\s+.{0,70}економік|(?:джерел|виток|походженн|природ)[а-яіїєґ]*\s+(?:економічн[а-яіїєґ]*\s+)?вартост|звідки\s+.{0,90}(?:економічн[а-яіїєґ]*\s+)?вартіст|на\s+чому\s+ґрунтуєт[а-яіїєґ]*\s+економ)/iu.test(question) &&
+      /(?:економічн[а-яіїєґ]*\s+(?:теорі|концепц|засад|основ|філософ|парадигм)|теоретичн[а-яіїєґ]*\s+(?:основ|засад)[а-яіїєґ]*.{0,90}економ|на\s+яких\s+.{0,70}економік|(?:джерел|виток|походженн|природ)[а-яіїєґ]*\s+(?:економічн[а-яіїєґ]*\s+)?(?:вартост|вартіст)|звідки\s+.{0,90}(?:економічн[а-яіїєґ]*\s+)?(?:вартост|вартіст)|на\s+чому\s+ґрунтуєт[а-яіїєґ]*\s+економ)/iu.test(question) &&
       (/(?:модел[ьіюі]?\s+середовищ|у\s+модел[іьюя]|ці[єїю]\s+модел|ваш[а-яіїєґ]*\s+модел|авторськ|kwatt|кватт)/iu.test(question) ||
        body.model_discovered === true ||
        userTurns.some(x => /модел[ьіюі]?\s+середовищ|kwatt|кватт/iu.test(x.content)));
@@ -1831,7 +1831,9 @@ export default {
     // A conceptual route must gain altitude. An initial building-level
     // discussion becomes a system-level question; the next opt-in choice
     // explicitly opens structural alternatives without naming the Model yet.
-    const conceptualNext = asksEconomicFoundations
+    const conceptualNext = asksAnthropoStructure
+      ? "Чому антропономічне оцінювання людського потенціалу не тотожне формуванню економічної вартості?"
+      : asksEconomicFoundations
       ? "Як антропономіка пов’язує людський потенціал із походженням економічної вартості?"
       : phase === "open" && topic === "economy"
       ? "Як якісно нові потреби та виробничі можливості взаємно змінюють структуру економічної системи?"
@@ -1856,7 +1858,9 @@ export default {
       : phase === "model" && topic === "recovery"
       ? "Як у Моделі середовища екологічні умови визначають енергетику, інфраструктуру й розселення?"
       : null;
-    const practicalNext = asksEconomicFoundations
+    const practicalNext = asksAnthropoStructure
+      ? "Як вимірювані фактори економічних рішень можуть змінювати втрати людського потенціалу?"
+      : asksEconomicFoundations
       ? "Як перевірити вплив економічних рішень Моделі на збереження та реалізацію людського потенціалу?"
       : phase === "open" && topic === "economy"
       ? "Як взаємні зміни попиту й пропозиції вплинуть на виробничі ланцюги та можливості підприємств?"
