@@ -554,14 +554,19 @@ async function chatReply(env,body,cors,actor,who,ctx){
   if(actor==="member")scheduleChatNotice(ctx,env,"chat",id);
   return obj(cors,{sent:true});
 }
-async function chatRead(env,id,userId,cors){
-  if(!threadIdOk(id))return bad(cors,"Invalid conversation",400);
+async function chatRead(env,id,userId,cors,visibleSeq){
+  const seq=Number(visibleSeq);
+  if(!threadIdOk(id)||!Number.isSafeInteger(seq)||seq<0)
+    return bad(cors,"Invalid read acknowledgement",400);
   const col=userId?"member_read_seq":"admin_read_seq";
   const sender=userId?"admin":"member";
+  // Acknowledge only messages already displayed. A newer incoming reply
+  // arriving between GET and POST must remain unread.
   const prep=env.DB.prepare(
-    "UPDATE collaboration_threads SET "+col+"=COALESCE((SELECT MAX(m.seq) FROM collaboration_messages m WHERE m.thread_id=collaboration_threads.id AND m.sender=?),0) WHERE id=?"+(userId?" AND user_id=?":"")
+    "UPDATE collaboration_threads SET "+col+"=MAX("+col+",COALESCE((SELECT MAX(m.seq) FROM collaboration_messages m WHERE m.thread_id=collaboration_threads.id AND m.sender=? AND m.seq<=?),0)) WHERE id=?"+
+    (userId?" AND user_id=?":"")
   );
-  const r=await (userId?prep.bind(sender,id,userId).run():prep.bind(sender,id).run());
+  const r=await (userId?prep.bind(sender,seq,id,userId).run():prep.bind(sender,seq,id).run());
   return obj(cors,{ok:!!r.meta?.changes},r.meta?.changes?200:404);
 }
 
@@ -600,7 +605,7 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     }
     if(request.method==="POST"&&path==="/admin/chat/read"){
       const body=await safeBody(request);
-      return chatRead(env,body?.thread_id,null,cors);
+      return chatRead(env,body?.thread_id,null,cors,body?.read_seq);
     }
     if(request.method==="POST"&&path==="/admin/chat/reply"){
       const body=await safeBody(request);
@@ -736,7 +741,7 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     }
     if(request.method==="POST"&&path==="/access/chat/read"){
       const b=await safeBody(request);
-      return chatRead(env,b?.thread_id,who.user_id,cors);
+      return chatRead(env,b?.thread_id,who.user_id,cors,b?.read_seq);
     }
     return bad(cors,"Unknown chat action",404);
   }
