@@ -172,80 +172,32 @@
     catch {message.focus();message.select();status.textContent="Текст виділено. Натисніть Ctrl+C або Command+C.";}
   });
 
-  // Contact delivery remains disabled unless server confirms D1 + Turnstile.
+  // The form is a draft; posting happens only after email-verified login
+  // in messages.html. No arbitrary contact email can claim someone else's chat.
   const contact=panel.querySelector(".contact-delivery");
   if(contact){
-    const API="https://oracle-api.andrewdonenko.workers.dev";
-    const send=contact.querySelector("[data-send-contact]");
-    const note=contact.querySelector("[data-delivery-status]");
-    const email=contact.querySelector("[name=contact_email]");
+    const launch=contact.querySelector("[data-start-chat]");
+    const statusText=contact.querySelector("[data-delivery-status]");
     const consent=contact.querySelector("#contact-consent");
-    const challenge=contact.querySelector("#contact-turnstile");
-    let sitekey="",token="",widget=null,enabled=false,loading=false;
-    const statusText=(message)=>{note.textContent=message;};
-    function loadChallenge(){
-      if(!sitekey||widget!==null)return;
-      if(window.turnstile?.render){
-        widget=window.turnstile.render(challenge,{
-          sitekey,callback(value){token=value;send.disabled=false;
-            statusText("Перевірку завершено. Можна надіслати звернення.");},
-          "expired-callback"(){token="";send.disabled=true;statusText("Повторіть перевірку.");},
-          "error-callback"(){token="";send.disabled=true;statusText("Перевірка тимчасово недоступна.");}
-        });
+    if(launch)launch.addEventListener("click",()=>{
+      const draftMessage=message.value.trim();
+      if(draftMessage.length<15||draftMessage.length>5000){
+        statusText.textContent="Звернення має містити 15–5000 символів.";
         return;
       }
-      if(document.getElementById("contact-turnstile-script"))return;
-      const script=document.createElement("script");
-      script.id="contact-turnstile-script";
-      script.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.async=true;
-      script.onload=loadChallenge;
-      script.onerror=()=>statusText("Не вдалося завантажити перевірку.");
-      document.head.append(script);
-    }
-    fetch(API+"/access/config",{cache:"no-store"}).then(async response=>{
-      if(!response.ok)throw Error("Access configuration unavailable");
-      const cfg=await response.json();
-      if(!cfg.contact_enabled || !cfg.turnstile_site_key){
-        statusText("Надсилання звернень поки не активоване. Ви можете скопіювати текст вище.");
+      if(!consent.checked){
+        statusText.textContent="Потрібна згода на приватну переписку.";
         return;
       }
-      sitekey=cfg.turnstile_site_key;enabled=true;
-      statusText("Пройдіть перевірку, щоб надіслати повідомлення.");
-      loadChallenge();
-    }).catch(()=>statusText("Сервер поки не приймає звернень. Текст можна скопіювати."));
-    send.addEventListener("click",async()=>{
-      if(!enabled||loading||!token)return;
-      if(!consent.checked){statusText("Для надсилання потрібно погодитися з обробкою звернення.");return;}
-      if(!email.validity.valid||!email.value.trim()){statusText("Вкажіть дійсну електронну пошту.");return;}
-      if(message.value.trim().length<15||message.value.trim().length>5000){
-        statusText("Текст звернення має містити від 15 до 5000 символів.");return;
-      }
-      loading=true;send.disabled=true;statusText("Надсилаємо звернення…");
+      const source=currentPage||"model";
       try{
-        const source=location.pathname.endsWith("/feniks.html")?"feniks":
-          location.pathname.endsWith("/demo.html")?"demo":"model";
-        const response=await fetch(API+"/access/contact",{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({
-            source_page:source,interest:interest.value,intent:intent.value,
-            message:message.value.trim(),email:email.value.trim(),
-            contact_consent:true,turnstile_token:token
-          })
-        });
-        const data=await response.json();
-        if(!response.ok||!data.received)throw Error(data.error||"Server error");
-        statusText("Звернення отримано та збережено для розгляду. Дякуємо!");
-        consent.checked=false;
-        // Prevent accidental duplicates; drafting remains available.
-        enabled=false;
-      }catch(error){
-        statusText("Не вдалося надіслати: "+error.message);
-      }finally{
-        token="";loading=false;
-        if(widget!==null&&window.turnstile&&enabled){
-          window.turnstile.reset(widget);send.disabled=true;
-        }
+        sessionStorage.setItem("ms-chat-draft-v1",JSON.stringify({
+          source_page:source,interest:interest.value,intent:intent.value,
+          message:draftMessage,created:Date.now()
+        }));
+        location.href="messages.html?source="+encodeURIComponent(source)+"&compose=1";
+      }catch{
+        statusText.textContent="Не вдалося зберегти чернетку в браузері. Скопіюйте її та відкрийте сторінку «Повідомлення».";
       }
     });
   }
