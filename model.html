@@ -76,7 +76,7 @@
       </aside>
     </div>
   </section>
-  <div class="shell page-layout">
+  <div class="shell page-layout with-updates">
     <aside class="toc" aria-label="Навігація за змістом">
       <p>На цій сторінці</p>
       <a href="#definition">Предмет Моделі</a>
@@ -85,12 +85,6 @@
       <a href="#verification">Що потрібно перевірити</a>
       <a href="#related">Пов'язані теми</a>
       <a href="#participate">Участь у розробленні</a>
-    
-      <div class="updates-sidebar" data-updates-sidebar="model" aria-label="Останні актуалізації цієї теми">
-        <h2 class="updates-sidebar-title">Актуалізації</h2>
-        <p class="updates-empty">Завантажуємо актуалізації…</p>
-        <a class="updates-all-link" href="aktualizatsii.html">Всі статті →</a>
-      </div>
 </aside>
     <div>
       <section class="content-section" id="definition">
@@ -199,7 +193,17 @@
         </div>
       </section>
     </div>
-  </div>
+  
+  <aside class="updates-rail" data-updates-sidebar="model" aria-label="Актуалізації за темою model">
+    <div class="updates-sidebar-header">
+      <h2 class="updates-sidebar-title">Актуалізації</h2>
+      <a class="updates-all-link" href="aktualizatsii.html">Всі статті →</a>
+    </div>
+    <div class="updates-sidebar-list" tabindex="0" role="region" aria-label="Прокручувана стрічка актуалізацій">
+      <p class="updates-empty">Завантажуємо публікації…</p>
+    </div>
+  </aside>
+</div>
 </main>
 <section class="public-counter shell" data-public-counter aria-label="Лічильник відвідувань">
   <div class="public-counter-line">
