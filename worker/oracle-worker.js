@@ -13,6 +13,7 @@
  *   RESEND_API_KEY         (Secret)
  *   RESEND_FROM            (Text; verified sending address)
  *   OTP_PEPPER             (Secret)
+ *   VISITOR_HASH_KEY       (Secret, 32+ chars for visitor counter HMAC)
  *   ADMIN_DASHBOARD_TOKEN  (Secret; independent of test token)
  * Optional: GSC_SERVICE_ACCOUNT_JSON (Secret), GSC_SITE_URL (Text),
  *   MODEL_INPUT_USD_PER_M, MODEL_OUTPUT_USD_PER_M, MEMBER_DAILY_QUOTA.
@@ -366,6 +367,29 @@ async function insights(env){
   return {available:true,report:text||"No text generated",sample_count:(samples.results||[]).length};
 }
 
+// Site-wide and per-page counts. Stored visitor identities are HMAC digests
+// of browser-generated random IDs; they are not names, IPs, or unique people.
+async function publicVisitorHash(env,visitorId){
+  const secret=String(env.VISITOR_HASH_KEY||"");
+  if(secret.length<32)throw Error("Counter secret missing");
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),
+    {name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const raw=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(visitorId));
+  return [...new Uint8Array(raw)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+async function publicCounterTotals(env,page){
+  const [allViews,allUnique,pageViews,pageUnique,first]=await Promise.all([
+    env.DB.prepare("SELECT COALESCE(SUM(total_views),0) AS n FROM public_page_stats").first(),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM public_unique_browsers").first(),
+    env.DB.prepare("SELECT total_views AS n FROM public_page_stats WHERE page=?").bind(page).first(),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM public_page_unique_browsers WHERE page=?").bind(page).first(),
+    env.DB.prepare("SELECT MIN(first_counted_at) AS n FROM public_page_stats").first()
+  ]);
+  return {page,scope:"since_activation",started_at:first?.n||null,
+    site:{total_views:Number(allViews?.n||0),unique_browsers:Number(allUnique?.n||0)},
+    current_page:{total_views:Number(pageViews?.n||0),unique_browsers:Number(pageUnique?.n||0)}};
+}
+
 async function dispatchPortalRequest(request,env,ctx,cors){
   const u=new URL(request.url);
   const path=u.pathname.replace(/\/+$/,"");
@@ -419,14 +443,37 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     return bad(cors,"Unknown admin action",404);
   }
   const absent=requireDB(env,cors);if(absent)return absent;
+  if(request.method==="GET"&&path==="/access/counters"){
+    const page=originPage(u.searchParams.get("page"));
+    if(page==="unknown")return bad(cors,"Invalid page",400);
+    if(!env.VISITOR_HASH_KEY||String(env.VISITOR_HASH_KEY).length<32)
+      return bad(cors,"Public counters not configured",503);
+    try{return obj(cors,await publicCounterTotals(env,page));}
+    catch{return bad(cors,"Public counters unavailable",503);}
+  }
   if(request.method==="POST"&&path==="/access/pageview"){
     const b=await safeBody(request);
-    if(!b || !["model","feniks","demo"].includes(b.source_page))
-      return bad(cors,"Invalid source page",400);
-    await env.DB.prepare(
-      "INSERT INTO portal_events(id,created_at,event_type,source_page) VALUES (?,?,?,?)"
-    ).bind(crypto.randomUUID(),now(),"page_view",b.source_page).run();
-    return obj(cors,{ok:true});
+    if(!b || !["model","feniks","demo"].includes(b.source_page) ||
+       !/^[a-f0-9]{64}$/.test(String(b.visitor_id||"")))
+      return bad(cors,"Invalid pageview event",400);
+    if(!env.VISITOR_HASH_KEY||String(env.VISITOR_HASH_KEY).length<32)
+      return bad(cors,"Public counters not configured",503);
+    try{
+      const page=b.source_page,ts=now();
+      const visitorHash=await publicVisitorHash(env,b.visitor_id);
+      // D1 batch writes all counts and deduplicated browser records atomically.
+      await env.DB.batch([
+        env.DB.prepare("INSERT OR IGNORE INTO public_unique_browsers(visitor_hash,first_seen_at) VALUES (?,?)")
+          .bind(visitorHash,ts),
+        env.DB.prepare("INSERT OR IGNORE INTO public_page_unique_browsers(page,visitor_hash,first_seen_at) VALUES (?,?,?)")
+          .bind(page,visitorHash,ts),
+        env.DB.prepare("INSERT INTO public_page_stats(page,total_views,first_counted_at) VALUES (?,1,?) ON CONFLICT(page) DO UPDATE SET total_views=total_views+1")
+          .bind(page,ts),
+        env.DB.prepare("INSERT INTO portal_events(id,created_at,event_type,source_page) VALUES (?,?,?,?)")
+          .bind(crypto.randomUUID(),ts,"page_view",page)
+      ]);
+      return obj(cors,{ok:true,...await publicCounterTotals(env,page)});
+    }catch{return bad(cors,"Unable to register pageview",503);}
   }
   if(request.method==="POST"&&path==="/access/contact"){
     if(!env.TURNSTILE_SITE_KEY||!env.TURNSTILE_SECRET)return bad(cors,"Contact form is not configured",503);
