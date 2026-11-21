@@ -76,7 +76,21 @@
 <label for="message">Текст звернення</label>
 <textarea id="message" name="message" aria-describedby="form-note"></textarea>
 <button type="button" data-copy>Скопіювати звернення</button><div role="status" aria-live="polite"></div>
-<p class="hint" id="form-note">Текст можна скопіювати. Повідомлення ще не надсилається через сайт: канал приймання звернень готується. Особа автора не розкривається.</p></div></div></section></div></div></main><footer class="site-footer"><div class="shell"><div class="footer-grid">
+<p class="hint" id="form-note">Текст можна скопіювати або надіслати через захищену форму нижче після її підключення до сервера. Особа автора публічно не розкривається.</p>
+<div class="contact-delivery">
+  <h3>Надіслати звернення до команди розроблення</h3>
+  <p class="small muted">Повідомлення зберігатиметься у закритому кабінеті. Публічного контакту автора не потрібно.</p>
+  <label for="contact-email">Email для відповіді</label>
+  <input type="email" id="contact-email" name="contact_email" autocomplete="email" maxlength="254" placeholder="email@example.com">
+  <label class="contact-agreement" for="contact-consent">
+    <input id="contact-consent" type="checkbox">
+    Дозволяю обробити мої контактні дані й текст звернення для відповіді та розгляду пропозиції.
+  </label>
+  <div id="contact-turnstile" aria-label="Перевірка, що звернення надсилає людина"></div>
+  <button type="button" data-send-contact disabled>Надіслати звернення</button>
+  <div role="status" aria-live="polite" data-delivery-status>Приймання повідомлень стане доступним після підключення сервера.</div>
+  <p class="hint">Докладніше: <a href="privacy.html" target="_blank" rel="noopener">приватність Оракула та звернень</a>.</p>
+</div></div></div></section></div></div></main><footer class="site-footer"><div class="shell"><div class="footer-grid">
 <div><h2>Інші авторські дослідження</h2><p>Назви відомі публічно, зміст відкривається лише за індивідуальним погодженням.</p><div class="subjects" aria-label="Закриті напрями"><span class="subject locked">Філософія</span><span class="subject locked">Політика</span><span class="subject locked">Мистецтво</span><span class="subject locked">ARCHEONOMUS</span></div></div>
 <div><h2>Підтримка Оракула</h2><p>Планується добровільна підтримка витрат на ШІ-обчислення. Приймання внесків і публічний перелік спонсорів ще не запущені.</p></div>
 </div><div class="footer-bottom">Авторський дослідницький ресурс · Множинні точки входу · Матеріали відкриті до фахової критики</div></div><div class="shell" style="padding-bottom:10px"><a href="privacy.html" style="font-size:13px">Приватність Оракула та обробка запитань</a></div></footer>
