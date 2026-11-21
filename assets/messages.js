@@ -73,6 +73,7 @@ function compose(clear=false){
     storeRemove(DRAFT_KEY);
     $("chat-initial-message").value="";
     $("chat-consent").checked=false;
+    $("chat-analysis-consent").checked=false;
   }
 }
 function renderList(){
@@ -112,6 +113,8 @@ async function openThread(id,quiet=false){
     $("chat-thread-title").textContent=t.interest||"Діалог";
     $("chat-thread-summary").textContent=(t.intent||"")+" · "+time(t.created_at);
     $("chat-thread-state").textContent=t.status==="closed"?"Закрито":"Відкрито";
+    if(!$("chat-thread-analysis-consent").disabled)
+      $("chat-thread-analysis-consent").checked=t.analysis_consent===1;
     const area=$("chat-messages");
     const latest=(d.messages||[]).at(-1)?.seq||0;
     if(!quiet||latest!==state.lastSeq){
@@ -223,17 +226,38 @@ async function submitNew(){
   if(message.length<15||message.length>5000){notice("Звернення має містити 15–5000 символів.",true);return}
   const body={source_page:state.source||"model",
     interest:$("chat-interest").value,intent:$("chat-intent").value,
-    message,contact_consent:true};
+    message,contact_consent:true,
+    analysis_consent:$("chat-analysis-consent").checked===true};
   state.busy=true;$("chat-start").disabled=true;notice("Надсилаємо звернення…");
   try{
     const d=await req("/access/chat/start",{method:"POST",auth:true,body});
     if(!d.created)throw Error("Звернення не збережено.");
     storeRemove(DRAFT_KEY);
     $("chat-initial-message").value="";$("chat-consent").checked=false;
+    $("chat-analysis-consent").checked=false;
     await loadThreads();await openThread(d.thread_id);
     notice("Звернення отримано. Відповідь з’явиться в цьому діалозі.");
   }catch(e){notice(e.message,true)}
   finally{state.busy=false;$("chat-start").disabled=false}
+}
+async function changeAnalysisConsent(){
+  if(!state.threadId||state.busy)return;
+  const check=$("chat-thread-analysis-consent");
+  const accepted=check.checked;
+  check.disabled=true;
+  $("chat-analysis-status").textContent="Зберігаємо налаштування аналізу…";
+  try{
+    const result=await req("/access/chat/consent",{
+      method:"POST",auth:true,body:{thread_id:state.threadId,analysis_consent:accepted}
+    });
+    if(!result.ok)throw Error("Зміну не збережено");
+    $("chat-analysis-status").textContent=accepted?
+      "Дозвіл збережено. Повідомлення можуть увійти до майбутніх тематичних звітів ШІ.":
+      "Дозвіл відкликано. Подальші звіти не включатимуть текст цієї переписки.";
+  }catch(e){
+    check.checked=!accepted;
+    $("chat-analysis-status").textContent="Не вдалося змінити дозвіл: "+e.message;
+  }finally{check.disabled=false}
 }
 async function reply(){
   if(state.busy||!state.threadId)return;
@@ -256,6 +280,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("chat-new").addEventListener("click",()=>{compose(true);});
   $("chat-start").addEventListener("click",submitNew);
   $("chat-reply-send").addEventListener("click",reply);
+  $("chat-thread-analysis-consent").addEventListener("change",changeAnalysisConsent);
   $("chat-logout").addEventListener("click",async()=>{
     const token=state.token;
     try{if(token)await req("/access/logout",{method:"POST",auth:true,body:{}})}catch{}
