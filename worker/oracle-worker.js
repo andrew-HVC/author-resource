@@ -488,8 +488,8 @@ async function chatListAdmin(env){
 }
 async function chatMessages(env,id,userId){
   const t=userId?
-    await env.DB.prepare("SELECT id,source_page,interest,intent,created_at,updated_at,status FROM collaboration_threads WHERE id=? AND user_id=?").bind(id,userId).first():
-    await env.DB.prepare("SELECT t.id,t.source_page,t.interest,t.intent,t.created_at,t.updated_at,t.status,u.email FROM collaboration_threads t JOIN users u ON u.id=t.user_id WHERE t.id=?").bind(id).first();
+    await env.DB.prepare("SELECT id,source_page,interest,intent,created_at,updated_at,status,analysis_consent FROM collaboration_threads WHERE id=? AND user_id=?").bind(id,userId).first():
+    await env.DB.prepare("SELECT t.id,t.source_page,t.interest,t.intent,t.created_at,t.updated_at,t.status,t.analysis_consent,u.email FROM collaboration_threads t JOIN users u ON u.id=t.user_id WHERE t.id=?").bind(id).first();
   if(!t)return null;
   const data=await env.DB.prepare(
     "SELECT seq,id,sender,message,created_at FROM (SELECT seq,id,sender,message,created_at FROM collaboration_messages WHERE thread_id=? ORDER BY seq DESC LIMIT 200) ORDER BY seq ASC"
@@ -506,6 +506,18 @@ async function chatUnread(env,userId){
     ).first();
   return Number(v?.n||0);
 }
+// An independent opt-in for semantic analysis: member controls their own chat.
+async function chatAnalysisConsent(env,who,body,cors){
+  const id=String(body?.thread_id||"");
+  if(!threadIdOk(id)||typeof body?.analysis_consent!=="boolean")
+    return bad(cors,"Invalid analysis consent",400);
+  const yes=body.analysis_consent?1:0;
+  const r=await env.DB.prepare(
+    "UPDATE collaboration_threads SET analysis_consent=?,analysis_consented_at=? WHERE id=? AND user_id=?"
+  ).bind(yes,yes?now():null,id,who.user_id).run();
+  return obj(cors,{ok:!!r.meta?.changes,analysis_consent:yes===1},r.meta?.changes?200:404);
+}
+
 async function chatStart(env,who,body,cors,ctx){
   if(body?.contact_consent!==true)return bad(cors,"Consent is required for collaboration messages",400);
   const source=originPage(body.source_page);
@@ -520,8 +532,8 @@ async function chatStart(env,who,body,cors,ctx){
   const id=crypto.randomUUID(),mid=crypto.randomUUID(),ts=now();
   await env.DB.batch([
     env.DB.prepare(
-      "INSERT INTO collaboration_threads(id,user_id,source_page,interest,intent,created_at,updated_at,status) VALUES (?,?,?,?,?,?,?,'open')"
-    ).bind(id,who.user_id,source,interest,intent,ts,ts),
+      "INSERT INTO collaboration_threads(id,user_id,source_page,interest,intent,created_at,updated_at,status,analysis_consent,analysis_consented_at) VALUES (?,?,?,?,?,?,?,'open',?,?)"
+    ).bind(id,who.user_id,source,interest,intent,ts,ts,body.analysis_consent===true?1:0,body.analysis_consent===true?ts:null),
     env.DB.prepare(
       "INSERT INTO collaboration_messages(id,thread_id,sender,message,created_at) VALUES (?,?,'member',?,?)"
     ).bind(mid,id,message,ts)
@@ -743,6 +755,10 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     if(request.method==="POST"&&path==="/access/chat/start"){
       const b=await safeBody(request);
       return chatStart(env,who,b,cors,ctx);
+    }
+    if(request.method==="POST"&&path==="/access/chat/consent"){
+      const b=await safeBody(request);
+      return chatAnalysisConsent(env,who,b,cors);
     }
     if(request.method==="POST"&&path==="/access/chat/reply"){
       const b=await safeBody(request);
