@@ -24,6 +24,7 @@
       <button type="button" data-tab="questions" role="tab" aria-selected="false">Запитання</button>
       <button type="button" data-tab="search" role="tab" aria-selected="false">Пошуковий попит</button>
       <button type="button" data-tab="engagement" role="tab" aria-selected="false">Залучення</button>
+      <button type="button" data-tab="contacts" role="tab" aria-selected="false">Звернення</button>
       <button type="button" data-tab="insights" role="tab" aria-selected="false">Аналітичний звіт</button>
     </div>
     <button id="admin-logout" class="secondary" type="button">Вийти</button>
@@ -77,10 +78,22 @@
       <div class="kpi"><span class="label">Зареєстровано</span><strong id="kpi-members2">—</strong><small>Підтверджені email</small></div>
       <div class="kpi"><span class="label">Тексти за згодою</span><strong id="kpi-optins">—</strong><small>Можна досліджувати зміст</small></div>
       <div class="kpi"><span class="label">Позитивні оцінки</span><strong id="kpi-positive">—</strong><small>Якість відповідей</small></div>
+      <div class="kpi"><span class="label">Звернення щодо співпраці · 30 днів</span><strong id="kpi-contacts">—</strong><small>Фактично отримані повідомлення</small></div>
     </div>
     <div class="panel"><h2>Переходи до співпраці</h2>
-      <p>Поточна форма сайту лише готує звернення для копіювання. Поки немає підключеної форми надсилання, не можна достовірно рахувати заявки, конверсії у співпрацю або внески.</p>
-      <p>Наступний крок після налаштування адміністративного кабінету — серверна форма звернення з підтвердженням відправлення й окремою згодою на контакт.</p>
+      <p>Після підключення Cloudflare D1 та Turnstile відвідувач зможе надіслати звернення безпосередньо у закритий кабінет. До активації цієї функції форма дозволяє лише копіювати текст. Кількість звернень показує фактично прийняті повідомлення, але не доведену співпрацю чи внески.</p>
+      <p>Серверна форма підтримує підтвердження надсилання й окрему згоду на контакт. Укладені домовленості та внески обліковуються окремо.</p>
+    </div>
+  </section>
+  <section data-view="contacts" hidden>
+    <div class="panel"><h2>Звернення щодо співпраці</h2>
+      <p>Надіслані через тематичні сторінки повідомлення зберігаються в захищеній базі, не відображаються публічно та видаляються через 90 днів.</p>
+      <button id="contacts-refresh" class="primary" type="button">Оновити звернення</button>
+      <div class="table-wrapper"><table>
+        <thead><tr><th>Дата</th><th>Тема</th><th>Формат</th><th>Email</th><th>Текст звернення</th><th>Статус</th><th>Дія</th></tr></thead>
+        <tbody id="contact-rows"><tr><td colspan="7">Поки немає завантажених звернень.</td></tr></tbody>
+      </table></div>
+      <p class="note">Надсилання відповіді користувачу через кабінет не реалізоване. Для відповіді використовуйте контактну адресу, яку користувач надав добровільно.</p>
     </div>
   </section>
   <section data-view="insights" hidden>
