@@ -65,7 +65,11 @@ h3{font-size:20px;line-height:1.3;letter-spacing:-.01em;margin:0 0 12px}p{margin
 /* Постійна панель навігації та інтегрований випадаючий Оракул. */
 .site-header{position:sticky;top:0;z-index:200;box-shadow:0 3px 16px rgba(23,61,48,.07)}
 .oracle-toolbar{background:#6750a4;color:#fff;position:relative}
-.oracle-trigger{appearance:none;display:flex;align-items:center;gap:15px;width:100%;min-height:54px;padding:10px 28px;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
+.oracle-toolbar-inner{display:flex;align-items:stretch;gap:14px}
+.oracle-trigger{appearance:none;display:flex;align-items:center;gap:15px;flex:1 1 auto;min-width:0;width:auto;min-height:54px;padding:10px 0;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
+.oracle-standalone-link{display:inline-flex;flex:none;align-self:center;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border:1px solid rgba(255,255,255,.62);border-radius:7px;background:rgba(255,255,255,.08);color:#fff;text-decoration:none;font-size:13px;font-weight:750;white-space:nowrap}
+.oracle-standalone-link:hover{background:rgba(255,255,255,.19)}
+.oracle-standalone-link:focus-visible{outline:3px solid #f5d6ff;outline-offset:2px}
 .oracle-trigger:hover,.oracle-trigger[aria-expanded="true"]{background:#594093}
 .oracle-trigger:focus-visible{outline:3px solid #f5d6ff;outline-offset:-5px}
 .oracle-trigger-icon{display:grid;place-items:center;flex:none;width:31px;height:31px;border-radius:50%;border:1px solid rgba(255,255,255,.75);font-weight:800;font-size:18px;line-height:1}
@@ -79,16 +83,32 @@ h3{font-size:20px;line-height:1.3;letter-spacing:-.01em;margin:0 0 12px}p{margin
 .oracle-drawer-top{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid #e2e5e6;background:#fafaf9;flex:none}
 .oracle-drawer-top strong{font-size:15px}
 .oracle-drawer-top span{font-size:12px;color:#56665e;margin-right:auto}
+.oracle-drawer-open{display:inline-flex;align-items:center;justify-content:center;flex:none;padding:7px 12px;border:1px solid #c8d2cc;border-radius:6px;background:#fff;color:#294637;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap}
+.oracle-drawer-open:hover{background:#ebf1ec}
+.oracle-drawer-open:focus-visible{outline:2px solid #6750a4;outline-offset:2px}
 .oracle-close{border:1px solid #c8d2cc;color:#294637;background:#fff;padding:7px 13px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
 .oracle-close:hover{background:#ebf1ec}
 .oracle-frame{display:block;flex:1;min-height:0;width:100%;border:0;background:#f8f8f4}
 @media(max-width:750px){
-  .oracle-trigger{padding:9px 18px;min-height:52px;gap:11px}
+  .oracle-toolbar-inner{gap:8px}
+  .oracle-trigger{padding:8px 0;min-height:52px;gap:9px}
   .oracle-trigger-hint{display:none}
-  .oracle-trigger-main{font-size:15px}
+  .oracle-trigger-main{font-size:14px;line-height:1.2}
+  .oracle-standalone-link{font-size:12px;padding:8px 9px;gap:5px}
   .oracle-drawer{padding:0 6px}
   .oracle-drawer-top{padding:8px 11px;flex-wrap:wrap}
   .oracle-drawer-top span{display:none}
+}
+@media(max-width:480px){
+  .oracle-toolbar-inner{gap:5px}
+  .oracle-trigger{gap:6px}
+  .oracle-trigger-main{font-size:13px}
+  .oracle-trigger-icon{width:26px;height:26px;font-size:15px}
+  .oracle-trigger-chevron{font-size:15px}
+  .oracle-standalone-link span:last-child{display:none}
+  .oracle-standalone-link::after{content:"Окремо"}
+  .oracle-drawer-top{gap:6px}
+  .oracle-drawer-open,.oracle-close{font-size:12px;padding:6px 8px}
 }
 @media(prefers-reduced-motion:reduce){.oracle-trigger-chevron{transition:none}}
 
