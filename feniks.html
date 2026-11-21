@@ -80,18 +80,15 @@
 <button type="button" data-copy>Скопіювати звернення</button><div role="status" aria-live="polite"></div>
 <p class="hint" id="form-note">Текст можна скопіювати або надіслати через захищену форму нижче після її підключення до сервера. Особа автора публічно не розкривається.</p>
 <div class="contact-delivery">
-  <h3>Надіслати звернення до команди розроблення</h3>
-  <p class="small muted">Повідомлення зберігатиметься у закритому кабінеті. Публічного контакту автора не потрібно.</p>
-  <label for="contact-email">Email для відповіді</label>
-  <input type="email" id="contact-email" name="contact_email" autocomplete="email" maxlength="254" placeholder="email@example.com">
+  <h3>Звернення через особистий чат</h3>
+  <p class="small muted">Щоб отримати відповідь прямо на сайті, увійдіть через email. Ваше звернення стане приватним діалогом, а нові відповіді позначатимуться у розділі «Повідомлення».</p>
   <label class="contact-agreement" for="contact-consent">
     <input id="contact-consent" type="checkbox">
-    Дозволяю обробити мої контактні дані й текст звернення для відповіді та розгляду пропозиції.
+    Погоджуюся на зберігання звернення та приватної переписки для розгляду пропозиції та відповіді.
   </label>
-  <div id="contact-turnstile" aria-label="Перевірка, що звернення надсилає людина"></div>
-  <button type="button" data-send-contact disabled>Надіслати звернення</button>
-  <div role="status" aria-live="polite" data-delivery-status>Приймання повідомлень стане доступним після підключення сервера.</div>
-  <p class="hint">Докладніше: <a href="privacy.html" target="_blank" rel="noopener">приватність Оракула та звернень</a>.</p>
+  <button type="button" data-start-chat>Продовжити в чаті ↗</button>
+  <div role="status" aria-live="polite" data-delivery-status>Текст звернення буде перенесено до чату. Надсилання відбудеться після підтвердження входу.</div>
+  <p class="hint">Докладніше: <a href="privacy.html" target="_blank" rel="noopener noreferrer">приватність повідомлень</a>.</p>
 </div></div></section></div></div></main>
 <section class="public-counter shell" data-public-counter aria-label="Лічильник відвідувань">
   <div class="public-counter-line">
