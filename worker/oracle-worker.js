@@ -2,10 +2,20 @@
  * ORACLE API — Cloudflare Worker
  * Stateless multi-turn memory. All prior turns come from the browser tab.
  * Deploy manually in Cloudflare. Configure Secrets separately.
- * Required bindings:
- *   OPENAI_API_KEY         (Secret)
- *   ORACLE_TEST_TOKEN     (Secret)
+ * Required bindings for existing test mode:
+ *   OPENAI_API_KEY          (Secret)
+ *   ORACLE_TEST_TOKEN      (Secret)
  *   ORACLE_VECTOR_STORE_ID (Text)
+ * New portal (requires manual Cloudflare setup, see ORACLE_PORTAL_SETUP.md):
+ *   DB                     (D1 binding; migrations/0001 and 0002)
+ *   TURNSTILE_SITE_KEY     (Text)
+ *   TURNSTILE_SECRET       (Secret)
+ *   RESEND_API_KEY         (Secret)
+ *   RESEND_FROM            (Text; verified sending address)
+ *   OTP_PEPPER             (Secret)
+ *   ADMIN_DASHBOARD_TOKEN  (Secret; independent of test token)
+ * Optional: GSC_SERVICE_ACCOUNT_JSON (Secret), GSC_SITE_URL (Text),
+ *   MODEL_INPUT_USD_PER_M, MODEL_OUTPUT_USD_PER_M, MEMBER_DAILY_QUOTA.
  */
 /* Inline portal subsystem so Cloudflare dashboard can deploy ONE Worker file. */
 /**
