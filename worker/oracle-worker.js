@@ -204,7 +204,9 @@ async function queryGSC(env) {
 }
 
 function csvEscape(value){
-  const text=String(value??"");
+  let text=String(value??"");
+  // Prevent formula execution if an exported CSV is opened in a spreadsheet.
+  if (/^[\s]*[=+@-]/.test(text)) text="'"+text;
   return /["\n,;]/.test(text)?'"'+text.replace(/"/g,'""')+'"':text;
 }
 async function sendAccessEmail(env,email,code) {
@@ -361,6 +363,7 @@ async function dispatchPortalRequest(request,env,ctx,cors){
   if(path.startsWith("/admin")){
     if(!await adminAuth(request,env))return bad(cors,"Admin access denied",401);
     const absent=requireDB(env,cors);if(absent)return absent;
+    if(ctx?.waitUntil)ctx.waitUntil(retentionCleanup(env).catch(()=>{}));
     if(request.method==="GET"&&path==="/admin/overview")return obj(cors,await overview(env));
     if(request.method==="GET"&&path==="/admin/questions")
       return obj(cors,{questions:await adminQuestions(env,request)});
