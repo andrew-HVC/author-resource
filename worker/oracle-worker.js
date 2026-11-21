@@ -147,6 +147,7 @@ async function purgeOldTexts(env) {
   ).bind(now()-TEXT_RETENTION).run();
   await env.DB.prepare("DELETE FROM login_challenges WHERE expires_at<?").bind(now()-86400).run();
   await env.DB.prepare("DELETE FROM user_sessions WHERE expires_at<?").bind(now()).run();
+  await env.DB.prepare("DELETE FROM contact_requests WHERE created_at<?").bind(now()-90*86400).run();
 }
 
 const getMemberRemaining = async (env,who) => {
@@ -303,7 +304,8 @@ async function overview(env){
     Number.isFinite(inputPrice)&&Number.isFinite(outputPrice)&&inputPrice>=0&&outputPrice>=0;
   const estimated_cost_usd=validPrices?
     (Number(totals?.input_tokens||0)*inputPrice+Number(totals?.output_tokens||0)*outputPrice)/1000000:null;
-  return {period_days:30,totals:{...totals,pageviews:pageviews?.n||0,
+  const contacts=await env.DB.prepare("SELECT COUNT(*) AS n FROM contact_requests WHERE created_at>=?").bind(thirty).first();
+  return {period_days:30,totals:{...totals,contacts:contacts?.n||0,pageviews:pageviews?.n||0,
     estimated_cost_usd,guests:guests?.n||0,members:members?.n||0,
     feedback_helpful:feedback?.helpful||0,feedback_unhelpful:feedback?.unhelpful||0},
     topics:topics.results||[],pages:pages.results||[],days:days.results||[]};
@@ -358,7 +360,8 @@ async function dispatchPortalRequest(request,env,ctx,cors){
       member_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY&&env.RESEND_API_KEY&&env.RESEND_FROM&&env.OTP_PEPPER),
       turnstile_site_key:env.TURNSTILE_SITE_KEY||null,guest_limit:GUEST_LIMIT,
       member_daily_limit:Math.max(1,Number(env.MEMBER_DAILY_QUOTA||MEMBERS_DAILY_LIMIT)),
-      analytics_enabled:!!env.DB
+      analytics_enabled:!!env.DB,
+      contact_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY)
     });
   if(path.startsWith("/admin")){
     if(!await adminAuth(request,env))return bad(cors,"Admin access denied",401);
@@ -367,6 +370,19 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     if(request.method==="GET"&&path==="/admin/overview")return obj(cors,await overview(env));
     if(request.method==="GET"&&path==="/admin/questions")
       return obj(cors,{questions:await adminQuestions(env,request)});
+    if(request.method==="GET"&&path==="/admin/contacts"){
+      const rows=await env.DB.prepare(
+        "SELECT id,created_at,source_page,interest,intent,contact_email,message,status FROM contact_requests ORDER BY created_at DESC LIMIT 200"
+      ).all();
+      return obj(cors,{contacts:rows.results||[]});
+    }
+    if(request.method==="POST"&&path==="/admin/contacts/update"){
+      const b=await safeBody(request);
+      if(!b||!/^[-a-f0-9]{36}$/.test(String(b.id||""))||!["new","read","closed"].includes(b.status))
+        return bad(cors,"Invalid contact update");
+      await env.DB.prepare("UPDATE contact_requests SET status=? WHERE id=?").bind(b.status,b.id).run();
+      return obj(cors,{ok:true});
+    }
     if(request.method==="GET"&&path==="/admin/search"){
       try{return obj(cors,await queryGSC(env));}
       catch(e){return bad(cors,String(e.message||"Search Console unavailable"),503);}
@@ -395,6 +411,25 @@ async function dispatchPortalRequest(request,env,ctx,cors){
       "INSERT INTO portal_events(id,created_at,event_type,source_page) VALUES (?,?,?,?)"
     ).bind(crypto.randomUUID(),now(),"page_view",b.source_page).run();
     return obj(cors,{ok:true});
+  }
+  if(request.method==="POST"&&path==="/access/contact"){
+    if(!env.TURNSTILE_SITE_KEY||!env.TURNSTILE_SECRET)return bad(cors,"Contact form is not configured",503);
+    const b=await safeBody(request);
+    if(!b||b.contact_consent!==true)return bad(cors,"Contact consent required");
+    const email=String(b.email||"").trim().toLowerCase();
+    const message=String(b.message||"").trim();
+    const interest=String(b.interest||"").trim().slice(0,160);
+    const intent=String(b.intent||"").trim().slice(0,160);
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254 ||
+        message.length<15||message.length>5000 || !interest || !intent)
+      return bad(cors,"Invalid contact details",400);
+    if(!await validateTurnstile(env,b.turnstile_token,getIP(request)))
+      return bad(cors,"Human verification required",403);
+    await env.DB.prepare(
+      "INSERT INTO contact_requests(id,created_at,source_page,interest,intent,contact_email,message,status,consent_at) VALUES (?,?,?,?,?,?,?,?,?)"
+    ).bind(crypto.randomUUID(),now(),originPage(b.source_page),interest,intent,email,
+      message,"new",now()).run();
+    return obj(cors,{received:true});
   }
   if(request.method==="POST"&&path==="/access/guest"){
     const b=await safeBody(request);if(!b)return bad(cors,"Invalid request");
