@@ -31,7 +31,7 @@
     if(el){el.textContent=text;el.dataset.state=kind;}
   }
   function limit(value){
-    if(typeof value==="number")state.remaining=value;
+    state.remaining=typeof value==="number"?value:null;
     const el=$("access-remaining");
     if(el)el.textContent=state.remaining===null?"":(
       state.remaining>0?"Залишилося запитань: "+state.remaining:
@@ -222,6 +222,16 @@
       }
     });
     $("access-start-guest")?.addEventListener("click",startGuest);
+    $("access-delete-guest")?.addEventListener("click",async()=>{
+      const key=localStorage.getItem(GUEST_KEY);
+      if(!key){status("Гостьової сесії у цьому браузері не знайдено.","error");return}
+      if(!confirm("Видалити збережені тексти пробної сесії? Ліміт запитань залишиться чинним."))return;
+      try{
+        await api("/access/privacy/delete",{},key);
+        $("access-consent").checked=false;
+        status("Збережені тексти видалено. Ліміт запитань не змінено.");
+      }catch(e){status("Видалення не виконано: "+e.message,"error");}
+    });
     $("access-start-email")?.addEventListener("click",startEmail);
     $("access-verify-email")?.addEventListener("click",verifyEmail);
     $("access-logout")?.addEventListener("click",async()=>{
