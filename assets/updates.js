@@ -51,7 +51,7 @@ function card(item,compact=false){
     h.append(a);
   }else h.textContent=item.title;
   article.append(h);
-  if(!compact)article.append(node("p","updates-summary",item.summary));
+  article.append(node("p","updates-summary",item.summary));
   if(!compact){
     const themes=node("p","updates-topics");
     themes.textContent=item.topics.map(t=>labels[t]).join(" · ");
@@ -63,14 +63,13 @@ const EMPTY="Публікацій поки немає.";
 function renderSidebar(el,items){
   const topic=el.dataset.updatesSidebar;
   if(!TOPICS.includes(topic))return;
-  const title=node("h2","updates-sidebar-title","Актуалізації");
-  const list=node("div","updates-sidebar-list");
-  const subset=items.filter(x=>x.topics.includes(topic)).slice(0,3);
+  const list=el.querySelector(".updates-sidebar-list");
+  if(!list)return;
+  // Leave the header and "Всі статті" link always visible; scroll only the previews.
+  const subset=items.filter(x=>x.topics.includes(topic)).slice(0,12);
+  list.replaceChildren();
   if(!subset.length)list.append(node("p","updates-empty","Публікацій за цією темою поки немає."));
   else for(const item of subset)list.append(card(item,true));
-  const all=node("a","updates-all-link","Всі статті →");
-  all.href="aktualizatsii.html";
-  el.replaceChildren(title,list,all);
 }
 function renderArchive(el,items){
   const list=el.querySelector("[data-updates-list]");
@@ -116,9 +115,8 @@ async function init(){
     if(archive)renderArchive(archive,items);
   }catch{
     for(const el of sides){
-      el.replaceChildren(node("p","updates-empty","Добірка тимчасово недоступна."));
-      const a=node("a","updates-all-link","Всі статті →");
-      a.href="aktualizatsii.html";el.append(a);
+      const list=el.querySelector(".updates-sidebar-list");
+      if(list)list.replaceChildren(node("p","updates-empty","Добірка тимчасово недоступна."));
     }
     if(archive){
       const list=archive.querySelector("[data-updates-list]");
