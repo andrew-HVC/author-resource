@@ -76,6 +76,7 @@
    $("kpi-members2").textContent=formatNum(t.members);
    $("kpi-optins").textContent=formatNum(t.saved_texts);
    $("kpi-positive").textContent=formatNum(t.feedback_helpful);
+   $("kpi-contacts").textContent=formatNum(t.contacts);
    $("feedback-totals").textContent=
      "Корисно: "+formatNum(t.feedback_helpful)+" · Не допомогло: "+formatNum(t.feedback_unhelpful)+".";
    $("privacy-totals").textContent=
@@ -114,6 +115,38 @@
      ])tr.append(el("td",v));
      tr.children[3].className="question";
      root.append(tr);
+   }
+ }
+ async function loadContacts(){
+   const data=await req("/admin/contacts");
+   const root=$("contact-rows");root.replaceChildren();
+   const rows=data.contacts||[];
+   if(!rows.length){const tr=el("tr"),td=el("td","Поки немає надісланих звернень.");td.colSpan=7;tr.append(td);root.append(tr);return;}
+   for(const item of rows){
+     const tr=el("tr");
+     for(const value of [
+       time(item.created_at),item.interest||"—",item.intent||"—",
+       item.contact_email||"—",item.message||"—",item.status||"new"
+     ]){
+       const td=el("td",value);tr.append(td);
+     }
+     tr.children[4].className="question";
+     const last=el("td");
+     if(item.status!=="closed"){
+       const button=el("button",item.status==="new"?"Прочитано":"Закрити");
+       button.type="button";
+       button.addEventListener("click",async()=>{
+         button.disabled=true;
+         try{
+           await req("/admin/contacts/update",{method:"POST",body:{
+             id:item.id,status:item.status==="new"?"read":"closed"
+           }});
+           await loadContacts();
+         }catch(error){errText(error.message);button.disabled=false;}
+       });
+       last.append(button);
+     }else last.append(el("span","Завершено","muted"));
+     tr.append(last);root.append(tr);
    }
  }
  async function exportCSV(){
@@ -226,6 +259,7 @@
    for(const view of document.querySelectorAll("[data-view]"))view.hidden=view.dataset.view!==id;
    errText("");
    if(id==="questions")loadQuestions().catch(e=>errText(e.message));
+   if(id==="contacts")loadContacts().catch(e=>errText(e.message));
  }
  async function login(){
    const entered=$("admin-secret").value.trim();
@@ -251,6 +285,7 @@
  for(const b of document.querySelectorAll("[data-tab]"))
    b.addEventListener("click",()=>tab(b.dataset.tab));
  $("questions-refresh").addEventListener("click",()=>loadQuestions().catch(e=>errText(e.message)));
+ $("contacts-refresh").addEventListener("click",()=>loadContacts().catch(e=>errText(e.message)));
  $("questions-export").addEventListener("click",()=>exportCSV().catch(e=>errText(e.message)));
  $("gsc-sync").addEventListener("click",syncSearch);
  $("gsc-file").addEventListener("change",async e=>{
