@@ -109,7 +109,10 @@ async function identifyUser(request,env) {
 }
 
 async function authorizeOracleRequest(request,env) {
-  if(env.ORACLE_TEST_TOKEN && bearer(request)===env.ORACLE_TEST_TOKEN)
+  // Legacy secret is automatically disabled when D1 is active.
+  // Re-enable explicitly only for isolated administrator testing.
+  if(env.ORACLE_TEST_TOKEN && (!env.DB || env.ALLOW_LEGACY_TEST_MODE==="true") &&
+      bearer(request)===env.ORACLE_TEST_TOKEN)
     return {ok:true,kind:"legacy",user_id:null,key_hash:null,remaining:null};
   if(!env.DB)return {ok:false,status:503,error:"Guest and registered access are not configured"};
   const who=await identifyUser(request,env);
@@ -325,11 +328,14 @@ async function adminQuestions(env,request) {
   const params=new URL(request.url).searchParams;
   const limit=Math.max(1,Math.min(200,Number(params.get("limit")||100)));
   const topic=params.get("topic")||"";
-  const query=topic
-    ?"SELECT id,created_at,identity_kind,source_page,topic,question_length,stored_with_consent,question_text,feedback,input_tokens,output_tokens FROM oracle_questions WHERE topic=? ORDER BY created_at DESC LIMIT ?"
-    :"SELECT id,created_at,identity_kind,source_page,topic,question_length,stored_with_consent,question_text,feedback,input_tokens,output_tokens FROM oracle_questions ORDER BY created_at DESC LIMIT ?";
-  const r=topic?await env.DB.prepare(query).bind(topic,limit).all():
-    await env.DB.prepare(query).bind(limit).all();
+  const select="SELECT id,created_at,identity_kind,source_page,topic,question_length,"+
+    "CASE WHEN created_at>=? THEN stored_with_consent ELSE 0 END AS stored_with_consent,"+
+    "CASE WHEN created_at>=? THEN question_text ELSE NULL END AS question_text,"+
+    "feedback,input_tokens,output_tokens FROM oracle_questions";
+  const query=select+(topic?" WHERE topic=?":"")+" ORDER BY created_at DESC LIMIT ?";
+  const cutoff=now()-TEXT_RETENTION;
+  const r=topic?await env.DB.prepare(query).bind(cutoff,cutoff,topic,limit).all():
+    await env.DB.prepare(query).bind(cutoff,cutoff,limit).all();
   return r.results||[];
 }
 async function insights(env){
