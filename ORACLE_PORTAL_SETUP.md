@@ -14,20 +14,33 @@
 
 ## 1. Cloudflare D1
 
-У Cloudflare створіть D1 базу, наприклад `oracle-portal`. Застосуйте обидві схеми:
+У Cloudflare створіть D1 базу, наприклад `oracle-portal`. Застосуйте три схеми в зазначеному порядку:
 
-`worker/migrations/0001_oracle_portal.sql` та `worker/migrations/0002_contacts.sql`
+`worker/migrations/0001_oracle_portal.sql`, `worker/migrations/0002_contacts.sql` та `worker/migrations/0003_public_counters.sql`
 
 Через Wrangler, після входу в потрібний акаунт Cloudflare:
 
 ```bash
 npx wrangler d1 execute oracle-portal --remote --file=worker/migrations/0001_oracle_portal.sql
 npx wrangler d1 execute oracle-portal --remote --file=worker/migrations/0002_contacts.sql
+npx wrangler d1 execute oracle-portal --remote --file=worker/migrations/0003_public_counters.sql
 ```
 
 Або виконайте SQL зі схеми у D1 SQL-консолі. Після створення бази підключіть її до **наявного** Cloudflare Worker під точною назвою binding **`DB`** (Workers → ваш Worker → Settings → Bindings → D1).
 
-Перевірте, що створені таблиці `guest_trials`, `users`, `login_challenges`, `user_sessions`, `user_daily_usage`, `oracle_questions`, `portal_events`, `contact_requests`.
+Перевірте, що створені таблиці `guest_trials`, `users`, `login_challenges`, `user_sessions`, `user_daily_usage`, `oracle_questions`, `portal_events`, `contact_requests`, `public_page_stats`, `public_unique_browsers`, `public_page_unique_browsers`.
+
+## Подвійний публічний лічильник
+
+На кожній із трьох сторінок показуються **Загалом переглядів** і **Унікальні браузери**. Перемикач **Ця сторінка / Увесь сайт** відображає або статистику поточної сторінки, або підсумок усіх трьох сторінок. До підключення D1 і нового Worker інтерфейс показує знак «—», а не вигаданий нуль.
+
+Додатково до D1 і міграції `0003_public_counters.sql` встановіть у Cloudflare Worker окремий секрет `VISITOR_HASH_KEY` (щонайменше 32 випадкові символи). Секрет не передається браузеру й не розміщується в GitHub. Не змінюйте його без причини: після ротації давні браузери можуть порахуватися повторно як нові.
+
+Браузер створює випадковий ідентифікатор у `localStorage`, сервер зберігає тільки HMAC-відбиток. **Унікальний браузер — це не гарантовано унікальна людина.** Перегляди рахуються за фактом зафіксованого завантаження сторінки. Показники починаються з активації цієї функції і не відновлюють історичні відвідування. За заборони локального сховища перегляд може не потрапити до лічильника.
+
+Перевірки: `GET /access/counters?page=model` повертає `site.total_views`, `site.unique_browsers`, `current_page.total_views`, `current_page.unique_browsers`. Після першого перегляду «унікальні браузери» збільшуються на 1; повторне відкриття тієї ж сторінки в тому самому браузері збільшує лише «загалом». Перехід на іншу сторінку не повинен удруге збільшувати загальну кількість унікальних браузерів сайту.
+
+**Не використовуйте лічильник як верифікований реєстр фізичних осіб:** його значення можуть спотворювати боти, спільні браузери, очищення даних і штучні запити. Для захисту публічного `POST /access/pageview` рекомендується Cloudflare WAF / Rate Limiting. Перевірте правову основу для використання постійного ідентифікатора у браузері та за потреби додайте механізм отримання згоди.
 
 ## 2. Cloudflare Turnstile — гостьова сесія
 
