@@ -1,20 +1,83 @@
 (function(){
   "use strict";
-  // Aggregate public pageviews without cookies, names or IP storage.
-  // A single event per thematic page per tab/day avoids accidental double counting.
+  // Public counters: total recorded views and distinct anonymous browser IDs.
+  // The server persists only an HMAC of the browser's random ID, not an IP/name.
   const currentPage=location.pathname.endsWith("/feniks.html")?"feniks":
     location.pathname.endsWith("/demo.html")?"demo":
     location.pathname.endsWith("/model.html")?"model":null;
-  if(currentPage){
-    try{
-      const marker="oracle-pageview:"+currentPage+":"+new Date().toISOString().slice(0,10);
-      if(!sessionStorage.getItem(marker)){
-        fetch("https://oracle-api.andrewdonenko.workers.dev/access/pageview",{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({source_page:currentPage}),keepalive:true
-        }).then(response=>{if(response.ok)sessionStorage.setItem(marker,"1");}).catch(()=>{});
+  const counter=document.querySelector("[data-public-counter]");
+  if(counter&&currentPage){
+    const API="https://oracle-api.andrewdonenko.workers.dev";
+    const totalEl=counter.querySelector("[data-counter-total]");
+    const uniqueEl=counter.querySelector("[data-counter-unique]");
+    const note=counter.querySelector("[data-counter-note]");
+    const modes=[...counter.querySelectorAll("[data-counter-scope]")];
+    const format=new Intl.NumberFormat("uk-UA");
+    let stats=null,scope="page";
+    function render(){
+      for(const button of modes)button.setAttribute("aria-pressed",
+        String(button.dataset.counterScope===scope));
+      const values=scope==="site"?stats?.site:stats?.current_page;
+      totalEl.textContent=Number.isFinite(values?.total_views)?
+        format.format(values.total_views):"—";
+      uniqueEl.textContent=Number.isFinite(values?.unique_browsers)?
+        format.format(values.unique_browsers):"—";
+      if(stats&&note){
+        const date=stats.started_at?
+          new Date(stats.started_at*1000).toLocaleDateString("uk-UA"):"дня запуску";
+        note.textContent="Облік із "+date+
+          ". Унікальні — різні браузери з постійним випадковим ідентифікатором, не окремі люди.";
       }
-    }catch{/* Visit analytics must not interrupt the public content. */}
+    }
+    for(const button of modes)button.addEventListener("click",()=>{
+      scope=button.dataset.counterScope==="site"?"site":"page";
+      render();
+    });
+    function visitorId(){
+      const key="ms-public-visitor-v1";
+      let value=localStorage.getItem(key);
+      if(!/^[a-f0-9]{64}$/.test(value||"")){
+        const bytes=crypto.getRandomValues(new Uint8Array(32));
+        value=Array.from(bytes,x=>x.toString(16).padStart(2,"0")).join("");
+        localStorage.setItem(key,value);
+      }
+      return value;
+    }
+    async function recordAndLoad(){
+      let identifier=null;
+      try{identifier=visitorId();}catch{/* Private storage may be blocked. */}
+      const marker="ms-public-pageview-v1:"+currentPage+":"+
+        new Date().toISOString().slice(0,10);
+      if(identifier){
+        let already=false;
+        try{already=sessionStorage.getItem(marker)==="1";}catch{}
+        if(!already){
+          try{
+            const response=await fetch(API+"/access/pageview",{
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({source_page:currentPage,visitor_id:identifier}),
+              cache:"no-store"
+            });
+            if(response.ok){
+              stats=await response.json();
+              try{sessionStorage.setItem(marker,"1");}catch{}
+            }
+          }catch{/* The public page remains readable during outages. */}
+        }
+      }
+      if(!stats){
+        try{
+          const response=await fetch(API+"/access/counters?page="+currentPage,
+            {cache:"no-store"});
+          if(response.ok)stats=await response.json();
+        }catch{}
+      }
+      if(!stats&&note)note.textContent=
+        "Статистика стане доступною після підключення Cloudflare D1. Показники поки не сформовані.";
+      render();
+    }
+    recordAndLoad();
   }
   // The same Oracle test interface is displayed inside a single retained iframe.
   // Keeping the iframe mounted when folded preserves the active dialog on this page.
