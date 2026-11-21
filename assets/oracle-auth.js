@@ -26,6 +26,13 @@
       return data;
     }finally{clearTimeout(abort)}
   };
+  function announceSessionChange(){
+    // Same-origin embedded Oracle can refresh the parent page's unread badge.
+    window.dispatchEvent(new Event("oracle-login"));
+    if(window.parent!==window){
+      try{window.parent.dispatchEvent(new Event("oracle-login"));}catch{}
+    }
+  }
   function status(text,kind="info"){
     const el=$("access-status");
     if(el){el.textContent=text;el.dataset.state=kind;}
@@ -158,6 +165,7 @@
       sessionStorage.setItem(MEMBER_KEY,data.token);
       sessionStorage.setItem(EMAIL_KEY,email);
       await memberStatus(data.token);
+      announceSessionChange();
       $("access-code").value="";
     }catch(e){status(e.message,"error");}
   }
@@ -238,6 +246,7 @@
       const current=state.credential;
       try{await api("/access/logout",{},current);}catch{}
       sessionStorage.removeItem(MEMBER_KEY);sessionStorage.removeItem(EMAIL_KEY);
+      announceSessionChange();
       state.credential="";
       showMode("member");$("access-signin-fields").hidden=false;
       $("access-signed-in").hidden=true;
@@ -249,6 +258,7 @@
         await api("/access/privacy/delete",{},state.credential);
         sessionStorage.removeItem(MEMBER_KEY);
         sessionStorage.removeItem(EMAIL_KEY);
+        announceSessionChange();
         location.reload();
       }catch(e){status("Видалення не виконано: "+e.message,"error");}
     });
