@@ -68,7 +68,7 @@
   </div>
   <div id="access-guest" hidden>
     <p class="access-explanation">Одна пробна сесія без реєстрації. Після її завершення для продовження потрібно увійти через email.</p>
-    <button type="button" id="access-start-guest" class="access-action">Розпочати або продовжити гостьову сесію</button>
+    <button type="button" id="access-start-guest" class="access-action">Розпочати або продовжити гостьову сесію</button><button type="button" id="access-delete-guest" class="access-subtle">Видалити збережені тексти гостьової сесії</button>
   </div>
   <div id="access-member" hidden>
     <div id="access-signin-fields">
@@ -95,7 +95,7 @@
     <input type="checkbox" id="access-consent">
     Дозволяю зберігати текст моїх запитань і відповідей до 30 днів для аналізу та покращення Оракула.
   </label>
-  <p class="access-privacy">Без цієї згоди зберігаються лише технічні показники та тематична категорія звернення. Не вводьте конфіденційні дані. Публікація запитань не передбачена.</p>
+  <p class="access-privacy">Без цієї згоди зберігаються лише технічні показники та тематична категорія звернення. Не вводьте конфіденційні дані. Публікація запитань не передбачена. <a href="privacy.html" target="_blank" rel="noopener">Докладніше про приватність</a>.</p>
 </section><details id="legacy-auth"><summary>Службовий тестовий доступ</summary><div class="auth-settings"><label for="token">Тестовий пароль</label><input type="password" id="token" form="form" autocomplete="off" required minlength="24"><small>Введіть ORACLE_TEST_TOKEN, а не ключ OpenAI. Пароль не записується в код чи сховище сайту.</small></div></details><h2>Діалог</h2><div id="thread" aria-live="polite" aria-label="Історія діалогу"><p class="empty">Тут з’являться запитання та відповіді.</p></div><form id="form" class="composer"><label id="question-label" for="question">Ваше запитання Оракулу</label><textarea id="question" rows="7" required maxlength="4000" placeholder="Поставте запитання своїми словами…"></textarea><small>Можна поставити власне запитання або обрати одну з плашок вище. Контекст діалогу зберігається. Enter — надіслати, Shift+Enter — новий рядок.</small><button id="send" type="submit">Запитати Оракула</button></form><div id="result" role="status" aria-live="polite"></div><button id="restart" type="button" class="secondary">Новий діалог</button><p><small>Пам’ять діалогу: до 6 останніх обмінів. Історія не записується у сховище браузера та зникає після оновлення сторінки або закриття вкладки.</small></p><p><small>Запити та попередні репліки передаються через Cloudflare до OpenAI. Не вводьте конфіденційних відомостей. Кожен успішний запит використовує баланс API.</small></p></main><div id="thinking" class="thinking-overlay" role="status" aria-live="polite" aria-atomic="true" hidden><div class="thinking-card"><div class="thinking-dots" aria-hidden="true"><span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span></div><div class="thinking-label">Оракул думає…</div></div></div><script src="assets/oracle-auth.js"></script><script>
 const form = document.getElementById("form");
 const token = document.getElementById("token");
