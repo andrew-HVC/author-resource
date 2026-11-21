@@ -58,8 +58,28 @@
 .oracle-embedded #access-panel{margin:0 0 12px}
 .oracle-embedded #access-guest .access-action{margin:4px 0 9px}
 @media(max-width:550px){.access-panel{padding:12px}.access-tabs{gap:5px}.access-tabs button{font-size:12px;padding:7px 8px}}
+.oracle-focus-panel{display:flex;justify-content:space-between;align-items:center;gap:13px;flex-wrap:wrap;background:#f1f4ed;border:1px solid #c5d8c9;border-left:4px solid #27714d;border-radius:9px;padding:11px 14px;margin:12px 0}
+.oracle-focus-panel[hidden]{display:none}
+.oracle-focus-info{display:flex;flex-direction:column;gap:3px;flex:1 1 320px}
+.oracle-focus-info small{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#256447}
+.oracle-focus-info strong{font-size:15px;line-height:1.3}
+.oracle-focus-info span{font-size:12px;color:#526358;line-height:1.4}
+.oracle-focus-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.oracle-focus-actions a,.oracle-focus-actions button{font:inherit;font-size:12px;font-weight:680;background:#fff;border:1px solid #b8cdbd;border-radius:6px;color:#27533a;text-decoration:none;padding:7px 10px;cursor:pointer}
+.oracle-focus-actions a:hover,.oracle-focus-actions button:hover{background:#e1ece3}
+.oracle-embedded .oracle-focus-panel{margin:0 0 11px;padding:9px 12px}
 </style><script>if(new URLSearchParams(location.search).get("embedded")==="1"){document.documentElement.classList.add("oracle-embedded");}</script></head>
-<body><main><a href="model.html">← До Моделі середовища</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі матеріалів Моделі середовища. Оракул враховує контекст попередніх реплік.</p><section id="access-panel" class="access-panel" aria-label="Доступ до Оракула">
+<body><main><a href="model.html">← До Моделі середовища</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі матеріалів Моделі середовища. Оракул враховує контекст попередніх реплік.</p><section class="oracle-focus-panel" id="oracle-focus-panel" hidden aria-label="Обрана тема дослідження">
+  <div class="oracle-focus-info">
+    <small>Предметне дослідження</small>
+    <strong id="oracle-focus-title">Обраний матеріал</strong>
+    <span>Оракул відповідатиме насамперед у контексті цього матеріалу. Ви можете запитати й про інші теми.</span>
+  </div>
+  <div class="oracle-focus-actions">
+    <a id="oracle-focus-source" href="model.html">До матеріалу ↗</a>
+    <button type="button" id="oracle-focus-clear">Загальний діалог</button>
+  </div>
+</section><section id="access-panel" class="access-panel" aria-label="Доступ до Оракула">
   <div class="access-bar"><strong>Доступ до Оракула</strong><span id="access-identity">Тестовий режим</span></div>
   <div class="access-tabs" id="access-tabs" role="group" aria-label="Спосіб входу">
     <button type="button" data-mode="guest" aria-pressed="false">Гість · 5 запитань</button>
@@ -100,6 +120,41 @@
 const form = document.getElementById("form");
 const token = document.getElementById("token");
 const question = document.getElementById("question");
+const focusParams=new URLSearchParams(location.search);
+const requestedFocus=String(focusParams.get("focus")||"");
+const safeFocus=/^(?:text:(?:model|feniks|demo):[a-z][a-z0-9-]{0,49}|graphic:GR-[0-9]{3,5})$/;
+let focusContext=null;
+async function setupFocus(){
+  if(!safeFocus.test(requestedFocus))return;
+  const isGraphic=requestedFocus.startsWith("graphic:");
+  try{
+    const r=await fetch("assets/"+(isGraphic?"visuals.json":"context.json"),{cache:"no-cache"});
+    if(!r.ok)return;
+    const data=await r.json();
+    if(data?.version!==1||!Array.isArray(data.items))return;
+    const item=data.items.find(x=>isGraphic?("graphic:"+x.id===requestedFocus):(x.id===requestedFocus&&x.type==="text"));
+    if(!item||!["model","feniks","demo"].includes(item.page)||
+        !/^[a-z][a-z0-9-]{0,49}$/.test(item.section||"")||
+        typeof item.title!=="string"||!item.title.trim())return;
+    focusContext=requestedFocus;
+    const panel=document.getElementById("oracle-focus-panel");
+    document.getElementById("oracle-focus-title").textContent=item.title;
+    document.getElementById("oracle-focus-source").href=item.page+".html#"+item.section;
+    panel.hidden=false;
+    document.getElementById("question").placeholder="Поставте запитання саме про цей матеріал…";
+  }catch{/* Bad or unavailable focus metadata must not block ordinary dialogue. */}
+}
+document.getElementById("oracle-focus-clear").addEventListener("click",()=>{
+  if(!focusContext)return;
+  focusContext=null;
+  document.getElementById("oracle-focus-panel").hidden=true;
+  const url=new URL(location.href);
+  url.searchParams.delete("focus");
+  window.history.replaceState(null,"",url.pathname+url.search+url.hash);
+  document.getElementById("restart").click();
+});
+setupFocus();
+
 const questionLabel = document.getElementById("question-label");
 const send = document.getElementById("send");
 const status = document.getElementById("result");
@@ -369,6 +424,7 @@ async function askOracle(q, route = null) {
         source_issue_keys: [...offeredIssueKeys].slice(-40),
         contextual_followup: route === null && history.length > 0,
         analytics_consent:window.OracleAccess?.consent?.()===true,
+        focus_context:focusContext,
         source_page:window.OracleAccess?.source?.()||"oracle"
       }),
       cache: "no-store",
@@ -383,6 +439,7 @@ async function askOracle(q, route = null) {
         (data.status ? " (API: " + data.status + ")" : "");
       return;
     }
+    const focusNotApplied=Boolean(focusContext&&data.focus_applied!==focusContext);
     if (typeof data.answer !== "string" || !data.answer.trim()) {
       status.textContent = "Модель не повернула текстової відповіді.";
       return;
@@ -429,7 +486,8 @@ async function askOracle(q, route = null) {
     if (route === null) question.value = "";
     questionLabel.textContent = "Ваше наступне запитання або уточнення";
     question.placeholder = "Уточніть попередню відповідь або поставте власне запитання…";
-    status.textContent = "";
+    status.textContent = focusNotApplied
+      ? "Увага: тематичний режим ще не підключений на сервері; ця відповідь могла бути загальною." : "";
     // Focusing the question used to jump the page back to the top.
     // Move focus to the new response without changing scroll, then reveal it.
     requestAnimationFrame(() => {
