@@ -2817,6 +2817,7 @@ export default {
         (hasDemoParticipation ? "" : "\n\n" + demoParticipation)
       : sourceIssueAnswer;
     return json({
+      focus_applied: focusObject?.id || null,
       answer: publicReferenceText(responseAnswer ||
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше."),
       sources: introducedModel ? sources : [],
