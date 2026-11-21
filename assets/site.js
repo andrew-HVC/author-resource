@@ -40,7 +40,9 @@
         drawer.hidden=false;
         toggle.setAttribute("aria-expanded","true");
         if(!hasLoaded){
-          iframe.src="oracle.html?embedded=1";
+          const source=location.pathname.endsWith("/feniks.html")?"feniks":
+            location.pathname.endsWith("/demo.html")?"demo":"model";
+          iframe.src="oracle.html?embedded=1&source="+encodeURIComponent(source);
           hasLoaded=true;
         }else{
           window.requestAnimationFrame(focusOracleInput);
