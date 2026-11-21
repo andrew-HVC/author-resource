@@ -1,5 +1,69 @@
 (function(){
   "use strict";
+  // The same Oracle test interface is displayed inside a single retained iframe.
+  // Keeping the iframe mounted when folded preserves the active dialog on this page.
+  const oracleShell=document.querySelector("[data-oracle-shell]");
+  if(oracleShell){
+    const toggle=oracleShell.querySelector("[data-oracle-trigger]");
+    const drawer=oracleShell.querySelector("[data-oracle-drawer]");
+    const close=oracleShell.querySelector("[data-oracle-close]");
+    const iframe=oracleShell.querySelector("[data-oracle-frame]");
+    if(toggle&&drawer&&close&&iframe){
+      let hasLoaded=false;
+      let lastFocus=null;
+      function updateHeaderHeight(){
+        document.documentElement.style.setProperty("--oracle-header-height",
+          Math.ceil(oracleShell.getBoundingClientRect().bottom)+"px");
+      }
+      function focusOracleInput(){
+        try{
+          if(drawer.hidden||!iframe.contentDocument)return;
+          const doc=iframe.contentDocument;
+          const token=doc.getElementById("token");
+          const question=doc.getElementById("question");
+          const target=(token&&!token.value)?token:question;
+          if(target)target.focus({preventScroll:true});
+        }catch(error){
+          // Browser privacy rules may prevent access if the hosting origin changes.
+          iframe.focus({preventScroll:true});
+        }
+      }
+      function fold(returnFocus=true){
+        if(drawer.hidden)return;
+        drawer.hidden=true;
+        toggle.setAttribute("aria-expanded","false");
+        if(returnFocus)toggle.focus({preventScroll:true});
+      }
+      function unfold(){
+        lastFocus=document.activeElement;
+        updateHeaderHeight();
+        drawer.hidden=false;
+        toggle.setAttribute("aria-expanded","true");
+        if(!hasLoaded){
+          iframe.src="oracle.html?embedded=1";
+          hasLoaded=true;
+        }else{
+          window.requestAnimationFrame(focusOracleInput);
+        }
+      }
+      iframe.addEventListener("load",()=>{
+        if(!drawer.hidden)window.requestAnimationFrame(focusOracleInput);
+      });
+      toggle.addEventListener("click",()=>{
+        if(drawer.hidden)unfold();
+        else fold();
+      });
+      close.addEventListener("click",()=>fold());
+      document.addEventListener("keydown",event=>{
+        if(event.key==="Escape"&&!drawer.hidden)fold();
+      });
+      document.addEventListener("pointerdown",event=>{
+        if(!drawer.hidden&&!oracleShell.contains(event.target))fold(false);
+      });
+      window.addEventListener("resize",updateHeaderHeight,{passive:true});
+      updateHeaderHeight();
+    }
+  }
   const panel = document.querySelector("[data-inquiry]");
   if(!panel) return;
   const interest=panel.querySelector("[name=interest]");
