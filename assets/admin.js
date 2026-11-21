@@ -117,6 +117,27 @@
      root.append(tr);
    }
  }
+ async function loadChatAnalytics(){
+   const status=$("chat-analytics-status");
+   status.textContent="Отримуємо зведені дані приватних діалогів…";
+   try{
+     const d=await req("/admin/chat/analytics");
+     const t=d.totals||{};
+     $("chat-kpi-threads").textContent=formatNum(t.threads);
+     $("chat-kpi-replied").textContent=formatNum(t.replied_threads);
+     $("chat-kpi-pending").textContent=formatNum(t.without_admin_reply);
+     $("chat-kpi-messages").textContent=formatNum(t.messages);
+     $("chat-kpi-latency").textContent=t.avg_response_hours===null||t.avg_response_hours===undefined?"—":
+       new Intl.NumberFormat("uk-UA",{maximumFractionDigits:1}).format(t.avg_response_hours)+" год";
+     $("chat-kpi-optin").textContent=formatNum(t.consented_threads);
+     $("chat-kpi-rate").textContent=(Number(t.threads||0)?t.reply_rate_percent+"%":"Немає даних")+" із відповіддю";
+     drawBars("chat-interests-chart",d.interests||[],"count","label");
+     drawBars("chat-intents-chart",d.intents||[],"count","label");
+     drawBars("chat-pages-chart",d.pages||[],"count","label");
+     status.textContent="Період: 30 днів. Метрики розраховані із записів переписки. Згода на змістовий аналіз необов’язкова.";
+   }catch(e){status.textContent="Аналітика приватних діалогів недоступна: "+e.message;}
+ }
+
  async function loadContacts(){
    const data=await req("/admin/contacts");
    const root=$("contact-rows");root.replaceChildren();
@@ -345,7 +366,8 @@
      const data=await req("/admin/insights",{method:"POST",body:{}});
      if(!data.available)throw Error(data.error||"Звіт недоступний");
      $("insights-report").textContent=data.report;
-     $("insights-status").textContent="Проаналізовано прикладів запитань за згодою: "+data.sample_count;
+     $("insights-status").textContent="Прикладів запитань за згодою: "+data.sample_count+
+       " · Фрагментів приватних повідомлень за окремою згодою: "+Number(data.chat_sample_count||0)+".";
    }catch(e){$("insights-status").textContent="Помилка: "+e.message;}
    finally{btn.disabled=false;}
  }
@@ -357,6 +379,7 @@
    if(id==="questions")loadQuestions().catch(e=>errText(e.message));
    if(id==="contacts")loadContacts().catch(e=>errText(e.message));
    if(id==="chat")loadAdminChats().catch(e=>errText(e.message));
+   if(id==="engagement")loadChatAnalytics();
  }
  async function login(){
    const entered=$("admin-secret").value.trim();
