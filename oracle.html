@@ -14,7 +14,24 @@
 .thinking-label{font-size:17px;font-weight:650;letter-spacing:.01em;white-space:nowrap}
 @keyframes oracle-thinking{0%,65%,100%{transform:translateY(0);opacity:.35}32%{transform:translateY(-8px);opacity:1}}
 @media (prefers-reduced-motion:reduce){.thinking-dot{animation:none;opacity:1}}
-</style></head>
+
+/* Inline drawer mode retains the same existing Oracle test and authentication. */
+.oracle-embedded main{max-width:920px;padding:14px 20px 22px}
+.oracle-embedded main>a:first-child,
+.oracle-embedded main>h1,
+.oracle-embedded main>h2,
+.oracle-embedded main>p:first-of-type{display:none}
+.oracle-embedded .auth-settings{margin:0 0 10px;padding:11px 14px;background:#eaf0ea;border:1px solid #cfdbd0;border-radius:9px}
+.oracle-embedded .auth-settings label{margin:0 0 4px;font-size:13px}
+.oracle-embedded .auth-settings input{padding:8px 10px}
+.oracle-embedded .auth-settings small{display:block;margin-top:6px;font-size:12px}
+.oracle-embedded .composer{margin-top:10px;padding:13px}
+.oracle-embedded .composer textarea{min-height:95px;height:95px}
+.oracle-embedded .composer button{margin-top:9px}
+.oracle-embedded #thread{margin-top:10px}
+.oracle-embedded .message{max-width:100%}
+.oracle-embedded .thinking-overlay{position:fixed}
+</style><script>if(new URLSearchParams(location.search).get("embedded")==="1"){document.documentElement.classList.add("oracle-embedded");}</script></head>
 <body><main><a href="model.html">← До Моделі середовища</a><h1>ОРАКУЛ</h1><p>Закрите тестування діалогу на основі матеріалів Моделі середовища. Оракул враховує контекст попередніх реплік.</p><div class="auth-settings"><label for="token">Тестовий пароль</label><input type="password" id="token" form="form" autocomplete="off" required minlength="24"><small>Введіть ORACLE_TEST_TOKEN, а не ключ OpenAI. Пароль не записується в код чи сховище сайту.</small></div><h2>Діалог</h2><div id="thread" aria-live="polite" aria-label="Історія діалогу"><p class="empty">Тут з’являться запитання та відповіді.</p></div><form id="form" class="composer"><label id="question-label" for="question">Ваше запитання Оракулу</label><textarea id="question" rows="7" required maxlength="4000" placeholder="Поставте запитання своїми словами…"></textarea><small>Можна поставити власне запитання або обрати одну з плашок вище. Контекст діалогу зберігається. Enter — надіслати, Shift+Enter — новий рядок.</small><button id="send" type="submit">Запитати Оракула</button></form><div id="result" role="status" aria-live="polite"></div><button id="restart" type="button" class="secondary">Новий діалог</button><p><small>Пам’ять діалогу: до 6 останніх обмінів. Історія не записується у сховище браузера та зникає після оновлення сторінки або закриття вкладки.</small></p><p><small>Запити та попередні репліки передаються через Cloudflare до OpenAI. Не вводьте конфіденційних відомостей. Кожен успішний запит використовує баланс API.</small></p></main><div id="thinking" class="thinking-overlay" role="status" aria-live="polite" aria-atomic="true" hidden><div class="thinking-card"><div class="thinking-dots" aria-hidden="true"><span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span></div><div class="thinking-label">Оракул думає…</div></div></div><script>
 const form = document.getElementById("form");
 const token = document.getElementById("token");
