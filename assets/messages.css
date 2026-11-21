@@ -71,3 +71,8 @@
  .chat-bubble{max-width:93%}
  .chat-user-line{flex-wrap:wrap}
 }
+
+/* Explicit, revocable text-analysis consent for each private thread. */
+.chat-analysis-toggle{display:flex;align-items:flex-start;gap:9px;margin:12px 0 3px;padding:10px 12px;background:#f7f9f5;border:1px solid var(--line);border-radius:7px;color:var(--muted);font-size:12px;font-weight:500;line-height:1.48}
+.chat-analysis-toggle input{flex:none;width:auto;margin:3px 0 0;accent-color:var(--accent)}
+.chat-analysis-note{font-size:11px;color:var(--accent);margin:0 0 9px}
