@@ -574,7 +574,15 @@ async function dispatchPortalRequest(request,env,ctx,cors){
   const u=new URL(request.url);
   const path=u.pathname.replace(/\/+$/,"");
   if(!path.startsWith("/access")&&!path.startsWith("/admin"))return null;
-  if(request.method==="GET"&&path==="/access/config")
+  if(request.method==="GET"&&path==="/access/config"){
+    let chatTablesReady=false;
+    if(env.DB){
+      try{
+        const table=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='collaboration_messages'").first();
+        const thread=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='collaboration_threads'").first();
+        chatTablesReady=!!(table&&thread);
+      }catch{/* Schema not migrated. */}
+    }
     return obj(cors,{
       db_enabled:!!env.DB,guest_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY),
       member_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY&&env.RESEND_API_KEY&&env.RESEND_FROM&&env.OTP_PEPPER),
@@ -582,9 +590,10 @@ async function dispatchPortalRequest(request,env,ctx,cors){
       member_daily_limit:Math.max(1,Number(env.MEMBER_DAILY_QUOTA||MEMBERS_DAILY_LIMIT)),
       analytics_enabled:!!env.DB,
       contact_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY),
-      chat_enabled:!!(env.DB&&env.RESEND_API_KEY&&env.RESEND_FROM&&env.OTP_PEPPER),
+      chat_enabled:!!(chatTablesReady&&env.RESEND_API_KEY&&env.RESEND_FROM&&env.OTP_PEPPER),
       admin_notifications_configured:!!(env.RESEND_API_KEY&&env.RESEND_FROM&&env.ADMIN_NOTIFY_EMAIL)
     });
+  }
   if(path.startsWith("/admin")){
     if(!await adminAuth(request,env))return bad(cors,"Admin access denied",401);
     const absent=requireDB(env,cors);if(absent)return absent;
