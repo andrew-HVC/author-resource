@@ -211,7 +211,7 @@
      $("admin-chat-send").disabled=!open;
      $("admin-chat-status").disabled=false;
      $("admin-chat-status").textContent=open?"Закрити діалог":"Відкрити діалог";
-     await req("/admin/chat/read",{method:"POST",body:{thread_id:id}});
+     await req("/admin/chat/read",{method:"POST",body:{thread_id:id,read_seq:latest}});
      const data=await req("/admin/chat/threads");
      adminChatThreads=data.threads||[];
      renderAdminChatList();await chatBadge();
