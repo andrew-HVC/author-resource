@@ -15,6 +15,8 @@
  *   OTP_PEPPER             (Secret)
  *   VISITOR_HASH_KEY       (Secret, 32+ chars for visitor counter HMAC)
  *   ADMIN_DASHBOARD_TOKEN  (Secret; independent of test token)
+ *   ADMIN_NOTIFY_EMAIL    (Secret; where new-inquiry email alerts are sent)
+ *   D1 migration 0004      (Private chat threads + per-member read markers)
  * Optional: GSC_SERVICE_ACCOUNT_JSON (Secret), GSC_SITE_URL (Text),
  *   MODEL_INPUT_USD_PER_M, MODEL_OUTPUT_USD_PER_M, MEMBER_DAILY_QUOTA.
  */
@@ -162,6 +164,8 @@ async function purgeOldTexts(env) {
   await env.DB.prepare("DELETE FROM login_challenges WHERE expires_at<?").bind(now()-86400).run();
   await env.DB.prepare("DELETE FROM user_sessions WHERE expires_at<?").bind(now()).run();
   await env.DB.prepare("DELETE FROM contact_requests WHERE created_at<?").bind(now()-90*86400).run();
+  // Delete inactive private conversations after 180 days.
+  await env.DB.prepare("DELETE FROM collaboration_threads WHERE updated_at<?").bind(now()-CHAT_RETENTION).run();
 }
 
 const getMemberRemaining = async (env,who) => {
@@ -429,6 +433,138 @@ async function resolveOracleFocus(rawFocus) {
   }catch{return null;}
 }
 
+
+/* Verified-member collaboration inbox. No LLM calls and no emails to visitors:
+ * notifications are private per-account unread flags, not public site data. */
+const threadIdOk = id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id||""));
+const chatMessageOk = message => typeof message==="string" && message.trim().length>=1 &&
+  message.trim().length<=5000;
+const chatTitle = value => typeof value==="string"?value.trim().slice(0,160):"";
+const CHAT_RETENTION = 180*86400;
+
+async function notifyChatAdmin(env,category,id){
+  // A discreet alert, not a transcript. Fails closed when notifications aren't configured.
+  const recipient=String(env.ADMIN_NOTIFY_EMAIL||"").trim();
+  if(!env.RESEND_API_KEY||!env.RESEND_FROM||
+     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)||recipient.length>254)return false;
+  const isLegacy=category==="legacy";
+  const subject=isLegacy?"Нове звернення через сайт":"Нові повідомлення щодо співпраці";
+  try{
+    const response=await fetch("https://api.resend.com/emails",{
+      method:"POST",
+      headers:{"Authorization":"Bearer "+env.RESEND_API_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({
+        from:env.RESEND_FROM,to:[recipient],subject,
+        text:"Надійшло "+(isLegacy?"звернення":"нове повідомлення")+
+          " на авторському ресурсі. Перевірте захищений кабінет:\n"+
+          "https://andrew-hvc.github.io/author-resource/admin.html\n\n"+
+          "Ідентифікатор: "+String(id||"")+"\n"+
+          "Текст і контактні дані не пересилаються в цьому сповіщенні."
+      })
+    });
+    return response.ok;
+  }catch{return false;}
+}
+function scheduleChatNotice(ctx,env,kind,id){
+  if(ctx?.waitUntil)ctx.waitUntil(notifyChatAdmin(env,kind,id).catch(()=>false));
+}
+async function chatList(env,userId){
+  const data=await env.DB.prepare(
+    "SELECT t.id,t.source_page,t.interest,t.intent,t.created_at,t.updated_at,t.status,"+
+    "(SELECT message FROM collaboration_messages m WHERE m.thread_id=t.id ORDER BY m.seq DESC LIMIT 1) AS last_message,"+
+    "(SELECT COUNT(*) FROM collaboration_messages m WHERE m.thread_id=t.id AND m.sender='admin' AND m.seq>t.member_read_seq) AS unread "+
+    "FROM collaboration_threads t WHERE t.user_id=? ORDER BY t.updated_at DESC,t.id DESC LIMIT 100"
+  ).bind(userId).all();
+  return data.results||[];
+}
+async function chatListAdmin(env){
+  const data=await env.DB.prepare(
+    "SELECT t.id,t.source_page,t.interest,t.intent,t.created_at,t.updated_at,t.status,u.email,"+
+    "(SELECT message FROM collaboration_messages m WHERE m.thread_id=t.id ORDER BY m.seq DESC LIMIT 1) AS last_message,"+
+    "(SELECT COUNT(*) FROM collaboration_messages m WHERE m.thread_id=t.id AND m.sender='member' AND m.seq>t.admin_read_seq) AS unread "+
+    "FROM collaboration_threads t JOIN users u ON u.id=t.user_id ORDER BY t.updated_at DESC,t.id DESC LIMIT 200"
+  ).all();
+  return data.results||[];
+}
+async function chatMessages(env,id,userId){
+  const t=userId?
+    await env.DB.prepare("SELECT id,source_page,interest,intent,created_at,updated_at,status FROM collaboration_threads WHERE id=? AND user_id=?").bind(id,userId).first():
+    await env.DB.prepare("SELECT t.id,t.source_page,t.interest,t.intent,t.created_at,t.updated_at,t.status,u.email FROM collaboration_threads t JOIN users u ON u.id=t.user_id WHERE t.id=?").bind(id).first();
+  if(!t)return null;
+  const data=await env.DB.prepare(
+    "SELECT seq,id,sender,message,created_at FROM (SELECT seq,id,sender,message,created_at FROM collaboration_messages WHERE thread_id=? ORDER BY seq DESC LIMIT 200) ORDER BY seq ASC"
+  ).bind(id).all();
+  return {thread:t,messages:data.results||[]};
+}
+async function chatUnread(env,userId){
+  const v=userId?
+    await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM collaboration_messages m JOIN collaboration_threads t ON t.id=m.thread_id WHERE t.user_id=? AND m.sender='admin' AND m.seq>t.member_read_seq"
+    ).bind(userId).first():
+    await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM collaboration_messages m JOIN collaboration_threads t ON t.id=m.thread_id WHERE m.sender='member' AND m.seq>t.admin_read_seq"
+    ).first();
+  return Number(v?.n||0);
+}
+async function chatStart(env,who,body,cors,ctx){
+  if(body?.contact_consent!==true)return bad(cors,"Consent is required for collaboration messages",400);
+  const source=originPage(body.source_page);
+  const interest=chatTitle(body.interest),intent=chatTitle(body.intent);
+  const message=typeof body.message==="string"?body.message.trim():"";
+  if(source==="unknown"||!interest||!intent||!chatMessageOk(message))
+    return bad(cors,"Invalid conversation details",400);
+  const recent=await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM collaboration_threads WHERE user_id=? AND created_at>=?"
+  ).bind(who.user_id,now()-86400).first();
+  if(Number(recent?.n||0)>=5)return bad(cors,"Daily new-conversation limit reached",429);
+  const id=crypto.randomUUID(),mid=crypto.randomUUID(),ts=now();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO collaboration_threads(id,user_id,source_page,interest,intent,created_at,updated_at,status) VALUES (?,?,?,?,?,?,?,'open')"
+    ).bind(id,who.user_id,source,interest,intent,ts,ts),
+    env.DB.prepare(
+      "INSERT INTO collaboration_messages(id,thread_id,sender,message,created_at) VALUES (?,?,'member',?,?)"
+    ).bind(mid,id,message,ts)
+  ]);
+  scheduleChatNotice(ctx,env,"chat",id);
+  return obj(cors,{created:true,thread_id:id});
+}
+async function chatReply(env,body,cors,actor,who,ctx){
+  const id=String(body?.thread_id||"");
+  const message=typeof body?.message==="string"?body.message.trim():"";
+  if(!threadIdOk(id)||!chatMessageOk(message))return bad(cors,"Invalid chat message",400);
+  const t=actor==="member"?
+    await env.DB.prepare("SELECT id,status FROM collaboration_threads WHERE id=? AND user_id=?").bind(id,who.user_id).first():
+    await env.DB.prepare("SELECT id,status FROM collaboration_threads WHERE id=?").bind(id).first();
+  if(!t)return bad(cors,"Conversation not found",404);
+  if(t.status!=="open")return bad(cors,"Conversation is closed",409);
+  if(actor==="member"){
+    const count=await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM collaboration_messages m JOIN collaboration_threads t ON t.id=m.thread_id WHERE t.user_id=? AND m.sender='member' AND m.created_at>=?"
+    ).bind(who.user_id,now()-86400).first();
+    if(Number(count?.n||0)>=60)return bad(cors,"Daily message limit reached",429);
+  }
+  const ts=now();
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO collaboration_messages(id,thread_id,sender,message,created_at) VALUES (?,?,?,?,?)")
+      .bind(crypto.randomUUID(),id,actor,message,ts),
+    env.DB.prepare("UPDATE collaboration_threads SET updated_at=? WHERE id=?")
+      .bind(ts,id)
+  ]);
+  if(actor==="member")scheduleChatNotice(ctx,env,"chat",id);
+  return obj(cors,{sent:true});
+}
+async function chatRead(env,id,userId,cors){
+  if(!threadIdOk(id))return bad(cors,"Invalid conversation",400);
+  const col=userId?"member_read_seq":"admin_read_seq";
+  const sender=userId?"admin":"member";
+  const prep=env.DB.prepare(
+    "UPDATE collaboration_threads SET "+col+"=COALESCE((SELECT MAX(m.seq) FROM collaboration_messages m WHERE m.thread_id=collaboration_threads.id AND m.sender=?),0) WHERE id=?"+(userId?" AND user_id=?":"")
+  );
+  const r=await (userId?prep.bind(sender,id,userId).run():prep.bind(sender,id).run());
+  return obj(cors,{ok:!!r.meta?.changes},r.meta?.changes?200:404);
+}
+
 async function dispatchPortalRequest(request,env,ctx,cors){
   const u=new URL(request.url);
   const path=u.pathname.replace(/\/+$/,"");
@@ -440,7 +576,9 @@ async function dispatchPortalRequest(request,env,ctx,cors){
       turnstile_site_key:env.TURNSTILE_SITE_KEY||null,guest_limit:GUEST_LIMIT,
       member_daily_limit:Math.max(1,Number(env.MEMBER_DAILY_QUOTA||MEMBERS_DAILY_LIMIT)),
       analytics_enabled:!!env.DB,
-      contact_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY)
+      contact_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY),
+      chat_enabled:!!(env.DB&&env.RESEND_API_KEY&&env.RESEND_FROM&&env.OTP_PEPPER),
+      admin_notifications_configured:!!(env.RESEND_API_KEY&&env.RESEND_FROM&&env.ADMIN_NOTIFY_EMAIL)
     });
   if(path.startsWith("/admin")){
     if(!await adminAuth(request,env))return bad(cors,"Admin access denied",401);
@@ -449,6 +587,33 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     if(request.method==="GET"&&path==="/admin/overview")return obj(cors,await overview(env));
     if(request.method==="GET"&&path==="/admin/questions")
       return obj(cors,{questions:await adminQuestions(env,request)});
+
+    if(request.method==="GET"&&path==="/admin/chat/unread")
+      return obj(cors,{unread:await chatUnread(env,null)});
+    if(request.method==="GET"&&path==="/admin/chat/threads")
+      return obj(cors,{threads:await chatListAdmin(env)});
+    if(request.method==="GET"&&path==="/admin/chat/thread"){
+      const id=u.searchParams.get("id");
+      if(!threadIdOk(id))return bad(cors,"Invalid conversation",400);
+      const result=await chatMessages(env,id,null);
+      return result?obj(cors,result):bad(cors,"Conversation not found",404);
+    }
+    if(request.method==="POST"&&path==="/admin/chat/read"){
+      const body=await safeBody(request);
+      return chatRead(env,body?.thread_id,null,cors);
+    }
+    if(request.method==="POST"&&path==="/admin/chat/reply"){
+      const body=await safeBody(request);
+      return chatReply(env,body,cors,"admin",null,ctx);
+    }
+    if(request.method==="POST"&&path==="/admin/chat/status"){
+      const b=await safeBody(request);
+      if(!threadIdOk(b?.thread_id)||!["open","closed"].includes(b?.status))
+        return bad(cors,"Invalid conversation status",400);
+      const r=await env.DB.prepare("UPDATE collaboration_threads SET status=? WHERE id=?")
+        .bind(b.status,b.thread_id).run();
+      return obj(cors,{ok:!!r.meta?.changes},r.meta?.changes?200:404);
+    }
     if(request.method==="GET"&&path==="/admin/contacts"){
       const rows=await env.DB.prepare(
         "SELECT id,created_at,source_page,interest,intent,contact_email,message,status FROM contact_requests ORDER BY created_at DESC LIMIT 200"
@@ -527,10 +692,12 @@ async function dispatchPortalRequest(request,env,ctx,cors){
       return bad(cors,"Invalid contact details",400);
     if(!await validateTurnstile(env,b.turnstile_token,getIP(request)))
       return bad(cors,"Human verification required",403);
+    const legacyId=crypto.randomUUID();
     await env.DB.prepare(
       "INSERT INTO contact_requests(id,created_at,source_page,interest,intent,contact_email,message,status,consent_at) VALUES (?,?,?,?,?,?,?,?,?)"
-    ).bind(crypto.randomUUID(),now(),originPage(b.source_page),interest,intent,email,
+    ).bind(legacyId,now(),originPage(b.source_page),interest,intent,email,
       message,"new",now()).run();
+    scheduleChatNotice(ctx,env,"legacy",legacyId);
     return obj(cors,{received:true});
   }
   if(request.method==="POST"&&path==="/access/guest"){
@@ -547,9 +714,39 @@ async function dispatchPortalRequest(request,env,ctx,cors){
   }
   const who=await identifyUser(request,env);
   if(!who)return bad(cors,"Sign in required",401);
+  if(path.startsWith("/access/chat/")){
+    if(who.kind!=="member")return bad(cors,"Email-verified account required",403);
+    if(request.method==="GET"&&path==="/access/chat/unread")
+      return obj(cors,{unread:await chatUnread(env,who.user_id)});
+    if(request.method==="GET"&&path==="/access/chat/threads")
+      return obj(cors,{threads:await chatList(env,who.user_id)});
+    if(request.method==="GET"&&path==="/access/chat/thread"){
+      const id=u.searchParams.get("id");
+      if(!threadIdOk(id))return bad(cors,"Invalid conversation",400);
+      const result=await chatMessages(env,id,who.user_id);
+      return result?obj(cors,result):bad(cors,"Conversation not found",404);
+    }
+    if(request.method==="POST"&&path==="/access/chat/start"){
+      const b=await safeBody(request);
+      return chatStart(env,who,b,cors,ctx);
+    }
+    if(request.method==="POST"&&path==="/access/chat/reply"){
+      const b=await safeBody(request);
+      return chatReply(env,b,cors,"member",who,ctx);
+    }
+    if(request.method==="POST"&&path==="/access/chat/read"){
+      const b=await safeBody(request);
+      return chatRead(env,b?.thread_id,who.user_id,cors);
+    }
+    return bad(cors,"Unknown chat action",404);
+  }
   if(request.method==="GET"&&path==="/access/me"){
     const left=who.kind==="guest"
       ?GUEST_LIMIT-who.used:await getMemberRemaining(env,who);
+    if(who.kind==="member"){
+      const u=await env.DB.prepare("SELECT email FROM users WHERE id=?").bind(who.user_id).first();
+      return obj(cors,{kind:who.kind,remaining:left,email:u?.email||null});
+    }
     return obj(cors,{kind:who.kind,remaining:left});
   }
   if(request.method==="POST"&&path==="/access/logout"){
