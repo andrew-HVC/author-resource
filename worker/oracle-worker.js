@@ -426,10 +426,17 @@ async function dispatchPortalRequest(request,env,ctx,cors){
     ).bind(b.value,b.question_id,who.key_hash).run();
     return obj(cors,{ok:!!r.meta?.changes},r.meta?.changes?200:404);
   }
-  if(request.method==="POST"&&path==="/access/privacy/delete"&&who.kind==="member"){
-    await env.DB.prepare("DELETE FROM oracle_questions WHERE user_id=?").bind(who.user_id).run();
-    await env.DB.prepare("DELETE FROM users WHERE id=?").bind(who.user_id).run();
-    return obj(cors,{deleted:true});
+  if(request.method==="POST"&&path==="/access/privacy/delete"){
+    if(who.kind==="member"){
+      await env.DB.prepare("DELETE FROM oracle_questions WHERE user_id=?").bind(who.user_id).run();
+      await env.DB.prepare("DELETE FROM users WHERE id=?").bind(who.user_id).run();
+      return obj(cors,{deleted:true});
+    }
+    // Keep the trial quota, but withdraw consent and erase saved guest texts.
+    await env.DB.prepare(
+      "UPDATE oracle_questions SET question_text=NULL,answer_text=NULL,stored_with_consent=0 WHERE actor_hash=?"
+    ).bind(who.key_hash).run();
+    return obj(cors,{deleted:true,quota_unchanged:true});
   }
   return bad(cors,"Unknown access action",404);
 }
