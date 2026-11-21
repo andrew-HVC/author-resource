@@ -35,7 +35,7 @@ const obj = (cors, data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
 });
 const safeBody = async request => {
-  if (Number(request.headers.get("Content-Length") || 0) > 8000) return null;
+  if (Number(request.headers.get("Content-Length") || 0) > 24000) return null;
   try { return await request.json(); } catch { return null; }
 };
 const bad = (cors, message, status=400) => obj(cors,{error:message},status);
