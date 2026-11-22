@@ -152,6 +152,59 @@
       prepareTurnstile();
     }
   }
+  // Google Identity Services only loads when the server advertises a
+  // configured Google OAuth client. Never claim login without a verified
+  // member token issued by our Worker.
+  let googleLoading=false;
+  function showGoogleLogin(){
+    const wrapper=$("access-google-wrap");
+    const target=$("access-google-button");
+    const clientId=String(state.config?.google_client_id||"");
+    if(!wrapper||!target||!clientId)return;
+    wrapper.hidden=false;
+    if(googleLoading||target.dataset.rendered==="true")return;
+    googleLoading=true;
+    const ready=()=>{
+      try{
+        google.accounts.id.initialize({
+          client_id:clientId,
+          auto_select:false,
+          callback:async response=>{
+            if(!response?.credential)return;
+            status("Перевіряємо вхід через Google…");
+            try{
+              const data=await api("/access/google",
+                {credential:response.credential});
+              if(!data.token)throw Error("No member session returned");
+              sessionStorage.setItem(MEMBER_KEY,data.token);
+              sessionStorage.setItem(EMAIL_KEY,data.email||"");
+              await memberStatus(data.token);
+              announceSessionChange();
+            }catch(error){
+              status("Не вдалося увійти через Google: "+error.message,"error");
+            }
+          }
+        });
+        google.accounts.id.renderButton(target,{
+          type:"standard",theme:"outline",size:"large",text:"signin_with",
+          shape:"rectangular",width:260,locale:"uk"
+        });
+        target.dataset.rendered="true";
+      }catch(error){
+        status("Вхід через Google наразі недоступний.","error");
+      }finally{googleLoading=false;}
+    };
+    if(window.google?.accounts?.id){ready();return;}
+    const script=document.createElement("script");
+    script.src="https://accounts.google.com/gsi/client";
+    script.async=true;
+    script.onload=ready;
+    script.onerror=()=>{
+      googleLoading=false;
+      status("Не вдалося завантажити вхід через Google.","error");
+    };
+    document.head.append(script);
+  }
   async function startEmail(){
     if(!state.config?.member_enabled){status("Реєстрацію ще не налаштовано.","error");return}
     const email=String($("access-email")?.value||"").trim();
@@ -219,6 +272,7 @@
         showMode(state.config.guest_enabled?"guest":"member");
         status("Оберіть спосіб входу до Оракула.");
       }
+      showGoogleLogin();
       state.ready=true;
     }catch(e){
       showMode("legacy");
