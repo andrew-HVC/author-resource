@@ -292,6 +292,9 @@ function articleNavigationFallback(question, answer, domain) {
   ];
   const scores = new Map();
   const bump = (id, score) => scores.set(id,(scores.get(id)||0)+score);
+  const isVerificationQuestion =
+    /верифікац|перевір|підтвердж|аудит|доказ|фальсифікац|повторн.{0,24}використ|подвійн.{0,16}(?:облік|прав)/iu.test(queryText) &&
+    /приватн|персональн|домен|економічн.{0,22}прав|ресурс|зобов|реєстр/iu.test(queryText);
   for (const [test, ids] of anchors) {
     const weight = test.test(queryText) ? 14 : test.test(text) ? 7 : 0;
     if (weight) ids.forEach((id,i) => bump(id,Math.max(1,weight-i*2)));
@@ -307,6 +310,15 @@ function articleNavigationFallback(question, answer, domain) {
       if (qTokens.has(token)) bump(id,5);
       else if (aTokens.has(token)) bump(id,2);
     }
+  }
+  if (isVerificationQuestion) {
+    const permitted = new Set(["МС-087","МС-079","МС-070","МС-086","МС-076","МС-039","МС-069","МС-048"]);
+    for(const id of scores.keys()) if(!permitted.has(id)) scores.delete(id);
+    for(const [id,weight] of [["МС-087",180],["МС-079",95],
+      ["МС-070",90],["МС-086",85],["МС-076",78],["МС-039",75]])
+      bump(id,weight);
+    if(/походжен|первинн.{0,20}(?:дан|запис)/iu.test(queryText)) bump("МС-086",55);
+    if(/подвійн|повторн|фальсифікац/iu.test(queryText)) bump("МС-070",60);
   }
   const fallback = ({
     economy:["МС-071","МС-085","МС-084","МС-069"],
@@ -480,11 +492,12 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     const isTheoryTest = engagementMode === "theory_test" && testableIssue &&
       typeof testableIssue.claim === "string" && typeof testableIssue.test === "string";
     const isDemo = (engagementFocus === "demo" || engagementMode === "demo") && !isSourceIssue && !isTheoryTest;
+    const isDemoOrTheory = isDemo || isTheoryTest;
     const isAuthorContact = engagementMode === "author_contact";
     link.href = "./?topic=" + encodeURIComponent(engagementTopic) +
-      "&intent=" + encodeURIComponent(isDemo
+      "&intent=" + encodeURIComponent(isDemoOrTheory
         ? "Ініціатива розроблення" : "Професійна дискусія") +
-      (isDemo ? "&focus=demo" : "") +
+      (isDemoOrTheory ? "&focus=demo" : "") +
       (isAuthorContact ? "&focus=author" : "") +
       (isSourceIssue ? "&issue=" + encodeURIComponent(issueContext) : "") +
       (isTheoryTest ? "&issue=" + encodeURIComponent(
