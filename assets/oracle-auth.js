@@ -7,7 +7,7 @@
   const MEMBER_KEY="oracle-member-session-v1";
   const EMAIL_KEY="oracle-member-email-v1";
   const state={mode:"legacy",credential:"",config:null,challengeToken:"",
-    widget:null,ready:false,remaining:null};
+    widget:null,ready:false,remaining:null,role:null};
   const $ = id => document.getElementById(id);
   const hex = n => [...crypto.getRandomValues(new Uint8Array(n))]
     .map(x=>x.toString(16).padStart(2,"0")).join("");
@@ -40,7 +40,9 @@
   function limit(value){
     state.remaining=typeof value==="number"?value:null;
     const el=$("access-remaining");
-    if(el)el.textContent=state.remaining===null?"":(
+    if(el)el.textContent=state.mode==="member"&&state.role==="admin"
+      ?"Адміністратор · без ліміту запитань"
+      :state.remaining===null?"":(
       state.remaining>0?"Залишилося запитань: "+state.remaining:
       state.mode==="guest"
         ? "Ви використали пробні запитання. Для продовження потрібні вхід або реєстрація."
@@ -49,6 +51,7 @@
   }
   function showMode(mode,credential){
     state.mode=mode;
+    if(mode!=="member")state.role=null;
     state.credential=credential||"";
     const input=$("token");
     if(input){
@@ -101,8 +104,11 @@
     const data=await api("/access/me",undefined,credential);
     if(data.kind!=="member")throw Error("Invalid login session");
     showMode("member",credential);
+    state.role=data.role==="admin"?"admin":"member";
     limit(data.remaining);
-    status("Ви увійшли. Можна ставити запитання.");
+    status(state.role==="admin"
+      ?"Ви увійшли як адміністратор. Ліміту запитань немає."
+      :"Ви увійшли. Можна ставити запитання.");
     const signin=$("access-signin-fields");
     if(signin)signin.hidden=true;
     const active=$("access-signed-in");
@@ -276,6 +282,7 @@
       return ["model","feniks","demo"].includes(v)?v:"oracle";},
     onAnswer:data=>{
       if(typeof data.remaining==="number")limit(data.remaining);
+      else if(state.mode==="member"&&state.role==="admin")limit(null);
       if(state.mode==="guest"&&data.remaining===0)
         status(state.config?.member_enabled
           ?"Пробна сесія завершена. Для наступних запитань увійдіть через email."
