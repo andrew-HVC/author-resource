@@ -1346,8 +1346,10 @@ export default {
         return "economy";
       if (/економіст|економістк|економічн[а-яіїєґ]*\s+(?:систем|відносин|механізм|теорі)/.test(input)) return "economy";
       if (/відбудов|зруйнован|архітектур|повоєнн|генплан/.test(input)) return "recovery";
+      // Transport/logistics is the primary topic even when the fleet is
+      // electric or the question mentions energy as an adjacent system.
+      if (/транспорт|логіст|перевез|дорожн[а-яіїєґ]*s+рух|автономн[а-яіїєґ]*s+(?:машин|флот)/.test(input)) return "transport";
       if (/енерг|електр|генерац|накопич|потужн/.test(input)) return "energy";
-      if (/транспорт|логіст|перевез/.test(input)) return "transport";
       if (/агро|зерн|врожай|сільськ/.test(input)) return "agriculture";
       if (/соціальн|соціум|спільнот|громад|людськ[а-яіїєґ]*\s+потенціал|антропоном/.test(input))
         return "social";
@@ -2879,6 +2881,8 @@ export default {
       ? "Як Модель середовища змінює роль енергетики в організації виробництва та територій?"
       : phase === "model" && topic === "recovery"
       ? "Як у Моделі середовища екологічні умови визначають енергетику, інфраструктуру й розселення?"
+      : phase === "model" && topic === "transport"
+      ? "Як лінійний інфраструктурний каркас МС змінює організацію транспортних потоків і території?"
       : null;
     const practicalNext = asksAnthropoStructure
       ? "Як вимірювані фактори економічних рішень можуть змінювати втрати людського потенціалу?"
@@ -2898,6 +2902,8 @@ export default {
       ? "Які екологічні, енергетичні та соціальні наслідки Моделі середовища потрібно перевірити насамперед?"
       : phase === "alternatives" && topic === "energy"
       ? "Які ризики та можливі переваги альтернативної енергетичної організації потрібно перевірити?"
+      : phase === "model" && topic === "transport"
+      ? "Як перевірити безпеку, пропускну здатність і відмовостійкість ізольованого транспортного коридору?"
       : null;
     // Keep both navigation choices even when the visitor has already used
     // the initial fallback questions. History contains at most six user turns,
