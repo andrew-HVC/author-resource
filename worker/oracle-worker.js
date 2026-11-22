@@ -298,6 +298,73 @@ async function emailVerify(env,body,cors){
   return obj(cors,{token:credential,kind:"member",email,
     role:isAdmin?"admin":"member",remaining:isAdmin?null:MEMBERS_DAILY_LIMIT});
 }
+// Google Identity Services: verify the Google-signed ID token against
+// Google's public JWKs, then issue our existing independent member session.
+// Never accept a client-supplied email, role or user ID as authentication.
+const fromBase64Url = value => {
+  const normalized=String(value||"").replace(/-/g,"+").replace(/_/g,"/");
+  return Uint8Array.from(atob(normalized.padEnd(Math.ceil(normalized.length/4)*4,"=")),
+    ch=>ch.charCodeAt(0));
+};
+async function verifyGoogleIdToken(jwt,clientId){
+  if(typeof jwt!=="string"||jwt.length<250||jwt.length>8192)return null;
+  const parts=jwt.split(".");
+  if(parts.length!==3||parts.some(p=>!p))return null;
+  let header,claims;
+  try{
+    header=JSON.parse(new TextDecoder().decode(fromBase64Url(parts[0])));
+    claims=JSON.parse(new TextDecoder().decode(fromBase64Url(parts[1])));
+  }catch{return null;}
+  if(header?.alg!=="RS256"||!header.kid||
+     (claims?.iss!=="accounts.google.com"&&
+      claims?.iss!=="https://accounts.google.com")||
+     claims?.aud!==clientId||
+     !Number.isFinite(claims?.exp)||claims.exp<=now()||
+     !Number.isFinite(claims?.iat)||claims.iat>now()+120||
+     claims.iat<now()-86400||
+     claims.email_verified!==true||
+     typeof claims.email!=="string"||
+     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claims.email)||
+     typeof claims.sub!=="string"||!claims.sub)return null;
+  let keys;
+  try{
+    const response=await fetch("https://www.googleapis.com/oauth2/v3/certs");
+    if(!response.ok)return null;
+    keys=await response.json();
+  }catch{return null;}
+  const jwk=(keys?.keys||[]).find(key=>key.kid===header.kid&&
+    key.kty==="RSA"&&key.alg==="RS256"&&key.use==="sig");
+  if(!jwk)return null;
+  try{
+    const key=await crypto.subtle.importKey("jwk",jwk,
+      {name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);
+    const valid=await crypto.subtle.verify("RSASSA-PKCS1-v1_5",key,
+      fromBase64Url(parts[2]),new TextEncoder().encode(parts[0]+"."+parts[1]));
+    return valid?claims:null;
+  }catch{return null;}
+}
+async function googleSignIn(env,body,cors){
+  const clientId=String(env.GOOGLE_CLIENT_ID||"").trim();
+  if(!clientId)return bad(cors,"Google sign-in is not configured",503);
+  const claims=await verifyGoogleIdToken(body?.credential,clientId);
+  if(!claims)return bad(cors,"Google sign-in verification failed",401);
+  const email=claims.email.trim().toLowerCase();
+  const userId=crypto.randomUUID();
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO users(id,email,created_at,last_login_at) VALUES (?,?,?,?)"
+  ).bind(userId,email,now(),now()).run();
+  const u=await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
+  if(!u)return bad(cors,"Account unavailable",503);
+  await env.DB.prepare("UPDATE users SET last_login_at=? WHERE id=?")
+    .bind(now(),u.id).run();
+  const credential=randHex(32);
+  await env.DB.prepare(
+    "INSERT INTO user_sessions(credential_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)"
+  ).bind(await hashHex(credential),u.id,now(),now()+SESSION_TTL).run();
+  const isAdmin=isOracleAdminMember(env,{kind:"member",email});
+  return obj(cors,{token:credential,kind:"member",email,
+    role:isAdmin?"admin":"member",remaining:isAdmin?null:MEMBERS_DAILY_LIMIT});
+}
 async function guestStart(env,request,body,cors) {
   if(!env.TURNSTILE_SECRET||!env.TURNSTILE_SITE_KEY)return bad(cors,"Guest access is not configured",503);
   const key=String(body?.guest_key||"");
@@ -686,7 +753,7 @@ async function dispatchPortalRequest(request,env,ctx,cors){
       }catch{/* Schema not migrated. */}
     }
     return obj(cors,{
-      db_enabled:!!env.DB,guest_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY),
+      db_enabled:!!env.DB,google_client_id:env.DB?String(env.GOOGLE_CLIENT_ID||"").trim():"",guest_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY),
       member_enabled:!!(env.DB&&env.TURNSTILE_SECRET&&env.TURNSTILE_SITE_KEY&&env.RESEND_API_KEY&&env.RESEND_FROM&&env.OTP_PEPPER),
       turnstile_site_key:env.TURNSTILE_SITE_KEY||null,guest_limit:GUEST_LIMIT,
       member_daily_limit:Math.max(1,Number(env.MEMBER_DAILY_QUOTA||MEMBERS_DAILY_LIMIT)),
@@ -829,6 +896,10 @@ async function dispatchPortalRequest(request,env,ctx,cors){
   if(request.method==="POST"&&path==="/access/email/verify"){
     const b=await safeBody(request);if(!b)return bad(cors,"Invalid request");
     return emailVerify(env,b,cors);
+  }
+  if(request.method==="POST"&&path==="/access/google"){
+    const b=await safeBody(request);if(!b)return bad(cors,"Invalid request");
+    return googleSignIn(env,b,cors);
   }
   const who=await identifyUser(request,env);
   if(!who)return bad(cors,"Sign in required",401);
