@@ -3246,6 +3246,33 @@ export default {
     ];
     for (const [rx, ids] of epistemeAnchors)
       if (rx.test(topicalText)) ids.forEach((id, i) => addTopicScore(id, 14 - i * 3));
+    // The user's actual research problem outweighs incidental words in
+    // the generated answer. In a privacy / independent-verification case,
+    // only episteme articles about this mechanism qualify for first slots.
+    const verificationResearch =
+      /(?:верифікац|перевір|підтвердж|аудит|доказ|фальсифікац|повторн.{0,24}використ|подвійн.{0,16}(?:облік|прав|витрат))/iu.test(question) &&
+      /(?:приватн|персональн|домен|економічн.{0,22}прав|ресурс|зобов|реєстр)/iu.test(question);
+    const verificationTitles = [
+      "МС-087", "МС-079", "МС-070", "МС-086", "МС-076",
+      "МС-039", "МС-069", "МС-048", "МС-067"
+    ];
+    if (verificationResearch) {
+      for (const id of [...topicScores.keys()])
+        if (!verificationTitles.includes(id)) topicScores.delete(id);
+      const precisionBoost = {
+        "МС-087": 180, "МС-079": 95, "МС-070": 90,
+        "МС-086": 85, "МС-076": 78, "МС-039": 75,
+        "МС-069": 54, "МС-048": 42, "МС-067": 35
+      };
+      for (const [id, score] of Object.entries(precisionBoost))
+        addTopicScore(id, score);
+      if (/походжен|первинн.{0,20}(?:дан|запис)|фальсифікац/iu.test(question))
+        addTopicScore("МС-086", 60);
+      if (/подвійн|повторн|зловживан|фальсифікац/iu.test(question))
+        addTopicScore("МС-070", 55);
+      if (/редемпц|виконанн.{0,15}(?:прав|зобов)/iu.test(question))
+        addTopicScore("МС-076", 48);
+    }
     // The current question is more relevant than a broad answer which
     // may mention many adjacent concepts. The first entries in a tie use
     // canonical registration order, ensuring deterministic display.
@@ -3373,17 +3400,38 @@ export default {
     // A testable challenge is distinct from a contradiction between
     // two source documents. Never claim that falsifiability proves falsity.
     const rawTest = parsed?.testable_issue;
+    // If the model verbalizes a clearly labeled research claim but omits
+    // the structured metadata, recover the claim from its own answer.
+    // Do not infer a falsifier from generic disagreement.
+    const researchClaimMatch = answer.match(
+      /(?:перевірюван[а-яіїєґ]*\s+твердженн[яе]|твердженн[яе]\s+для\s+демонстраційн[а-яіїєґ]*\s+модел[іьюя])\s*:\s*[«"“]?([^\n]{50,320})/iu);
+    const extractedClaim = researchClaimMatch
+      ? researchClaimMatch[1].split(/(?<=[.!?])\s+/u)[0]
+          .replace(/[»"”]\s*$/u, "").trim().slice(0, 220) : "";
+    const researchMethodMatch = answer.match(
+      /(?:перевірк[аи]|випробуванн[яе]|моделюванн[яе])\s+(?:має|повинн[а-яіїєґ]*|потребує|може|слід|передбачає)[^.!?\n]{35,260}/iu);
+    const extractedMethod = researchMethodMatch
+      ? researchMethodMatch[0].trim().slice(0, 250) : "";
+    const citedTitleRefs = Object.entries(REFERENCE_TITLES)
+      .filter(([id,title]) => id.startsWith("МС-") &&
+        (answer.includes("«" + title + "»") || answer.includes(id)))
+      .map(([id]) => id).slice(0, 5);
     const testStatus = ["potential_falsifier", "verification_gap"]
-      .includes(rawTest?.status) ? rawTest.status : "none";
-    const testClaim = typeof rawTest?.claim === "string"
-      ? rawTest.claim.trim().slice(0, 220) : "";
-    const testMethod = typeof rawTest?.test === "string"
-      ? rawTest.test.trim().slice(0, 250) : "";
-    const testRefs = Array.isArray(rawTest?.refs)
-      ? [...new Set(rawTest.refs.filter(x => typeof x === "string")
-        .map(x => x.trim().toUpperCase().replace(/[–—]/g, "-"))
-        .filter(x => /^(?:АТ|МС)-\d{3}$/.test(x)))].slice(0, 5) : [];
-    const challengesModel = /супереч|протиріч|ризик|прогалин|спрост|фальсиф|критик|неузгодж|чи\s+не\s+перетвор|а\s+як\s+щодо|що\s+якщо|як\s+поєдн/iu.test(question);
+      .includes(rawTest?.status) ? rawTest.status
+      : extractedClaim && extractedMethod ? "verification_gap" : "none";
+    const testClaim = (typeof rawTest?.claim === "string" &&
+      rawTest.claim.trim().length >= 25 ? rawTest.claim.trim() :
+      extractedClaim).slice(0, 220);
+    const testMethod = (typeof rawTest?.test === "string" &&
+      rawTest.test.trim().length >= 30 ? rawTest.test.trim() :
+      extractedMethod).slice(0, 250);
+    const testRefs = [...new Set([
+      ...(Array.isArray(rawTest?.refs) ? rawTest.refs : []),
+      ...citedTitleRefs
+    ].filter(x => typeof x === "string")
+      .map(x => x.trim().toUpperCase().replace(/[–—]/g, "-"))
+      .filter(x => /^(?:АТ|МС)-\d{3}$/.test(x)))].slice(0, 5);
+    const challengesModel = /супереч|протиріч|ризик|прогалин|спрост|фальсиф|критик|неузгодж|чи\s+не\s+перетвор|а\s+як\s+щодо|що\s+якщо|як\s+поєдн|чи\s+достатн|яким\s+чином\s+перевір|хто\s+.{0,35}гарант/iu.test(question);
     const testableIssueGrounded = !strategicExploration && introducedModel &&
       !truncated && hasSourceSearch && sources.length > 0 &&
       challengesModel && testStatus !== "none" &&
@@ -3422,8 +3470,14 @@ export default {
       !/запрош[а-яіїєґ]*\s+долучит|мож(?:ете|на)\s+долучит|долучит[ися]*\s+до\s+(?:звірк|узгоджен|перевірк)/iu.test(answer)
       ? answer + "\n\nЗапрошую за бажанням долучитися до звірки зазначених джерел і запропонувати автору аргументоване уточнення."
       : answer;
+    const testCompetencies = /верифікац|приватн|економічн.{0,22}прав|реєстр|криптограф/iu.test(
+      question + " " + testClaim)
+      ? " Для такого дослідження можуть бути корисними компетенції з криптографії, інформаційної безпеки, розподілених реєстрів та економічного обліку."
+      : " До дослідження можуть долучитися фахівці з відповідних технологій, моделювання та предметної експертизи.";
     const theoryTestAnswer = inviteToTestModel
-      ? sourceIssueAnswer + "\n\nВи виявили потенційно перевірювану проблему в положеннях Моделі середовища — це ще не доказ їхнього спростування. Запрошуємо за бажанням долучитися до розроблення Демонстраційної моделі середовища для критичної перевірки на сценаріях, даних і взаємних впливах систем."
+      ? sourceIssueAnswer + "\n\nВиявлено питання для критичної перевірки в Демонстраційній моделі середовища: " +
+        testClaim + ". Це ще не доведена суперечність або спростування." +
+        testCompetencies + " За бажанням можна запропонувати дані, сценарій чи метод перевірки через форму співпраці."
       : sourceIssueAnswer;
     // The Demo invitation is explicitly part of the prose answer, not only
     // an optional card after the questions. The card links to a draft form.
