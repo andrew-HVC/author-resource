@@ -42,7 +42,9 @@
     const el=$("access-remaining");
     if(el)el.textContent=state.remaining===null?"":(
       state.remaining>0?"Залишилося запитань: "+state.remaining:
-      "Ліміт запитань вичерпано. Для продовження потрібна реєстрація або наступний день."
+      state.mode==="guest"
+        ? "Ви використали пробні запитання. Для продовження потрібні вхід або реєстрація."
+        : "Денний ліміт запитань вичерпано. Спробуйте наступного дня."
     );
   }
   function showMode(mode,credential){
@@ -118,7 +120,9 @@
         const data=await api("/access/me",undefined,guest);
         if(data.kind==="guest"){
           showMode("guest",guest);limit(data.remaining);
-          status(data.remaining?"Продовжуйте пробний діалог.":"Пробна сесія завершена. Зареєструйтеся.");
+          status(data.remaining?"Продовжуйте пробний діалог.":(state.config?.member_enabled
+            ?"Пробна сесія завершена. Увійдіть або зареєструйтеся."
+            :"Пробна сесія завершена. Реєстрація наразі ще налаштовується."));
           return true;
         }
       }catch{/* Initial guest session may not have been activated. */}
@@ -266,16 +270,23 @@
   });
   window.OracleAccess={
     credential:()=>state.credential||($("token")?.value||""),
+    memberEnabled:()=>state.config?.member_enabled===true,
     consent:()=>$("access-consent")?.checked===true,
     source:()=>{const v=new URLSearchParams(location.search).get("source");
       return ["model","feniks","demo"].includes(v)?v:"oracle";},
     onAnswer:data=>{
       if(typeof data.remaining==="number")limit(data.remaining);
       if(state.mode==="guest"&&data.remaining===0)
-        status("Пробна сесія завершена. Для наступних запитань увійдіть через email.");
+        status(state.config?.member_enabled
+          ?"Пробна сесія завершена. Для наступних запитань увійдіть через email."
+          :"Пробна сесія завершена. Реєстрація ще налаштовується.");
     },
     onError:(statusCode,message)=>{
-      if(statusCode===429)status(message+" Перейдіть до входу через email.","error");
+      if(statusCode===429)status(/guest trial is finished/i.test(message)
+        ?(state.config?.member_enabled
+          ?"Ви використали 5 безкоштовних запитань. Для продовження увійдіть або зареєструйтеся."
+          :"Ви використали 5 безкоштовних запитань. Реєстрація ще налаштовується.")
+        :"Досягнуто ліміту запитань.","error");
     },
     feedback
   };
