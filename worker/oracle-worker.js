@@ -103,13 +103,20 @@ async function identifyUser(request,env) {
   const member=await env.DB.prepare(
     "SELECT s.user_id,u.email FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.credential_hash=? AND s.expires_at>?"
   ).bind(digest,now()).first();
-  if(member)return {kind:"member",key_hash:digest,user_id:member.user_id};
+  if(member)return {kind:"member",key_hash:digest,user_id:member.user_id,
+    email:String(member.email||"").trim().toLowerCase()};
   const guest=await env.DB.prepare(
     "SELECT used FROM guest_trials WHERE credential_hash=?"
   ).bind(digest).first();
   if(guest)return {kind:"guest",key_hash:digest,used:Number(guest.used)};
   return null;
 }
+
+const isOracleAdminMember = (env,who) =>
+  who?.kind==="member" &&
+  typeof env.ORACLE_ADMIN_EMAIL==="string" &&
+  env.ORACLE_ADMIN_EMAIL.trim().length>0 &&
+  who.email===env.ORACLE_ADMIN_EMAIL.trim().toLowerCase();
 
 async function authorizeOracleRequest(request,env) {
   // Legacy secret is automatically disabled when D1 is active.
@@ -120,6 +127,8 @@ async function authorizeOracleRequest(request,env) {
   if(!env.DB)return {ok:false,status:503,error:"Guest and registered access are not configured"};
   const who=await identifyUser(request,env);
   if(!who)return {ok:false,status:401,error:"Sign in or start a guest session"};
+  if(isOracleAdminMember(env,who))
+    return {...who,ok:true,kind:"member",role:"admin",remaining:null};
   if(who.kind==="guest"){
     const r=await env.DB.prepare(
       "UPDATE guest_trials SET used=used+1,last_used_at=? WHERE credential_hash=? AND used<?"
@@ -169,6 +178,7 @@ async function purgeOldTexts(env) {
 }
 
 const getMemberRemaining = async (env,who) => {
+  if(isOracleAdminMember(env,who))return null;
   const r=await env.DB.prepare("SELECT used FROM user_daily_usage WHERE user_id=? AND day_id=?")
     .bind(who.user_id,day()).first();
   return Math.max(0,Math.max(1,Number(env.MEMBER_DAILY_QUOTA||MEMBERS_DAILY_LIMIT))-Number(r?.used||0));
@@ -284,7 +294,9 @@ async function emailVerify(env,body,cors){
   await env.DB.prepare(
     "INSERT INTO user_sessions(credential_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)"
   ).bind(await hashHex(credential),u.id,now(),now()+SESSION_TTL).run();
-  return obj(cors,{token:credential,kind:"member",email,remaining:MEMBERS_DAILY_LIMIT});
+  const isAdmin = isOracleAdminMember(env,{kind:"member",email});
+  return obj(cors,{token:credential,kind:"member",email,
+    role:isAdmin?"admin":"member",remaining:isAdmin?null:MEMBERS_DAILY_LIMIT});
 }
 async function guestStart(env,request,body,cors) {
   if(!env.TURNSTILE_SECRET||!env.TURNSTILE_SITE_KEY)return bad(cors,"Guest access is not configured",503);
@@ -855,7 +867,8 @@ async function dispatchPortalRequest(request,env,ctx,cors){
       ?GUEST_LIMIT-who.used:await getMemberRemaining(env,who);
     if(who.kind==="member"){
       const u=await env.DB.prepare("SELECT email FROM users WHERE id=?").bind(who.user_id).first();
-      return obj(cors,{kind:who.kind,remaining:left,email:u?.email||null});
+      return obj(cors,{kind:who.kind,role:isOracleAdminMember(env,who)?"admin":"member",
+        remaining:left,email:u?.email||null});
     }
     return obj(cors,{kind:who.kind,remaining:left});
   }
