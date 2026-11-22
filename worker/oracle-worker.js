@@ -1174,7 +1174,7 @@ export default {
       return json({ error: "Access verification failed" }, 503);
     }
 
-    // Public authorial name is Археономус; private legal identity remains
+    // Public authorial name is Archeonomus; private legal identity remains
     // undisclosed. Direct authorship questions have a deterministic answer.
     // Inquiries into the principle of unified authorship are NOT identity queries.
     const asksAuthorIdentity =
@@ -1193,7 +1193,7 @@ export default {
       !/модел[а-яіїєґ]*\s+середовищ/iu.test(question);
     if (asksAuthorIdentity && !clearlyDifferentWork) {
       return json({
-        answer: "Автор Моделі середовища — Археономус. Це публічне авторське ім’я; особисті дані автора не розкриваються. Для зв’язку скористайтеся формою зворотного зв’язку.",
+        answer: "Автор Моделі середовища — Archeonomus. Це публічне авторське ім’я; особисті дані автора не розкриваються. Для зв’язку скористайтеся формою зворотного зв’язку.",
         sources: [],
         conversation_domain: typeof body.conversation_domain === "string" ? body.conversation_domain : "general",
         model_discovered: body.model_discovered === true || /модел[а-яіїєґ]*\s+середовищ/iu.test(question),
@@ -2524,8 +2524,8 @@ export default {
       "призначення, механізм і причинні взаємозв'язки."
     ].join(" ") : "";
     const authorPrivacyInstructions = [
-      "Публічне авторське ім’я Моделі середовища — Археономус.",
-      "Коли відвідувач запитує, хто автор, називай Археономус.",
+      "Публічне авторське ім’я Моделі середовища — Archeonomus.",
+      "Коли відвідувач запитує, хто автор, називай Archeonomus.",
       "Не приписуй цьому імені правовий статус чи біографію без джерел.",
       "Справжня особистість автора залишається конфіденційною:",
       "не називай реального імені, прізвища, біографічних даних,",
