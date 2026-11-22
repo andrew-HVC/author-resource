@@ -585,6 +585,25 @@ async function askOracle(q, route = null) {
       return;
     }
     const focusNotApplied=Boolean(focusContext&&data.focus_applied!==focusContext);
+    // Bridge legacy Cloudflare deployments: the previous Worker still
+    // returns the obsolete privacy-only answer to author identity queries.
+    // Correct ONLY that precise obsolete response, after a successful
+    // authorized API call; preserve all other replies untouched.
+    const authorIdentityQuestion =
+      /(?:хто|чий|чиє|чиї)\s+.{0,75}(?:автор|створив|розробив|розробник)|(?:ім[’'ʼ]?я|назвіть|назви|скажіть|вкажіть)\s+.{0,65}автор/iu.test(q) &&
+      /модел|середовищ|автор/iu.test(q);
+    const legacyAuthorAnswer = typeof data.answer === "string" &&
+      /Особа автора Моделі середовища не розкривається/iu.test(data.answer);
+    if (authorIdentityQuestion && legacyAuthorAnswer) {
+      data.answer = "Автор Моделі середовища — Archeonomus. Це публічне авторське ім’я; особисті дані автора не розкриваються. Для зв’язку скористайтеся формою зворотного зв’язку.";
+      data.suggestions = [];
+      data.related_topics = [];
+      data.model_discovered = true;
+      data.engagement_mode = "author_contact";
+      data.engagement_offer = true;
+      data.engagement_focus = "general";
+      data.engagement_topic = "Модель середовища";
+    }
     if (typeof data.answer !== "string" || !data.answer.trim()) {
       status.textContent = "Модель не повернула текстової відповіді.";
       return;
@@ -601,6 +620,7 @@ async function askOracle(q, route = null) {
       q,
       typeof data.engagement_mode === "string" ? data.engagement_mode : "none",
       data.source_issue && typeof data.source_issue === "object" ? data.source_issue : null,
+      authorIdentityQuestion && legacyAuthorAnswer ? [] :
       Array.isArray(data.related_topics) && data.related_topics.some(item =>
         item && typeof item.label === "string" && typeof item.query === "string")
         ? data.related_topics
