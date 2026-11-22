@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personal Self-Governing Domain & ISTOTA | Archeonomus</title>
+<meta name="description" content="A clear overview for ISTOTA developers: the personal self-governing domain in the Environment Model, why ISTOTA is of interest, and the proposed first test.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://andrew-hvc.github.io/author-resource/domain-en.html">
+<link rel="alternate" hreflang="uk" href="https://andrew-hvc.github.io/author-resource/domain.html">
+<link rel="alternate" hreflang="en" href="https://andrew-hvc.github.io/author-resource/domain-en.html">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+.domain-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+.domain-box{background:#fff;border:1px solid #d9e2d9;border-radius:9px;padding:20px}
+.domain-box strong{display:block;font-size:18px;margin-bottom:8px}
+.domain-box p{font-size:14px;color:#53645b;margin:0}
+.domain-state{background:#edf2ea;border-left:4px solid #266247;padding:18px 22px;margin:23px 0}
+.domain-state p:last-child{margin-bottom:0}
+.lang-toggle{font-weight:750;white-space:nowrap}
+@media(max-width:760px){.domain-flow{grid-template-columns:1fr}}
+</style></head><body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site-header"><div class="shell header-inner">
+<a class="brand" href="model.html">ARCHEONOMUS<span>Independent concepts and research</span></a>
+<nav class="site-nav" aria-label="Navigation"><a href="model.html">Environment Model (UA)</a><a href="domain.html" class="lang-toggle" lang="uk">Українська версія</a></nav>
+</div></header>
+<main id="content">
+<section class="hero"><div class="shell hero-inner">
+<div>
+<div class="eyebrow">Environment Model · Personal digital systems · Exploratory study</div>
+<h1>Personal<br>Self-Governing Domain</h1>
+<p class="lead">Could ISTOTA provide the first experimental implementation of a persistent, user-controlled digital domain?</p>
+<p class="summary">This page introduces an independent research concept and why <strong>ISTOTA</strong> is relevant to it. We are exploring technical feasibility—not announcing a deployed integration, an endorsement, or an existing collaboration.</p>
+<div class="hero-actions"><a class="btn" href="#test">The first practical test</a><a class="btn btn-outline" href="https://github.com/istota-project/istota" target="_blank" rel="noopener noreferrer">ISTOTA source code</a></div>
+</div>
+<aside class="hero-aside">
+<small>For ISTOTA maintainers</small>
+<p><strong>What we are asking:</strong> can an existing ISTOTA instance be evaluated as a technical prototype of a personal domain?</p>
+<p><strong>What we are not asking:</strong> to join a large project, endorse the Environment Model, or implement its economic system.</p>
+</aside>
+</div></section>
+<div class="shell page-layout">
+<aside class="toc" aria-label="Page sections"><p>On this page</p>
+<a href="#model">The concept</a><a href="#why">Why ISTOTA?</a><a href="#scope">Division of roles</a><a href="#test">First test</a><a href="#status">Present status</a></aside>
+<div>
+<section class="content-section" id="model"><div class="section-label">01 / The concept</div>
+<h2>What is a personal self-governing domain?</h2>
+<p>The <strong>Environment Model</strong> is an independently developed conceptual framework for the organization of natural and human environments, infrastructure, production, resource flows, and social and economic relations. A personal self-governing domain is one of its proposed digital components.</p>
+<p>At the personal level, the domain is a persistent digital environment that can represent a person's information, changing circumstances, needs, resources, goals, commitments, and the outcomes of delegated actions. At a later stage, independent domains could interact under defined rules while preserving individual control over data and commitments.</p>
+<p>The person—not the AI agent—remains responsible for authorizing consequential actions. This domain is a <strong>concept under development</strong>, not an operating product.</p>
+</section>
+<section class="content-section" id="why"><div class="section-label">02 / Technical affinity</div>
+<h2>Why does ISTOTA matter to us?</h2>
+<p>ISTOTA appears to offer several foundations that would otherwise need to be built from scratch: persistent personal context, agent-assisted work, scheduled task execution, user-separated data, and tools for collaboration. These are promising correspondences, not yet demonstrated compatibility with our requirements.</p>
+<div class="domain-flow">
+<div class="domain-box"><strong>Person</strong><p>Goals, permissions, data ownership, decisions and limits on delegation.</p></div>
+<div class="domain-box"><strong>ISTOTA</strong><p>Candidate software layer: interface, memory, AI tools and task execution.</p></div>
+<div class="domain-box"><strong>Domain rules</strong><p>Future Environment Model layer: needs, economic records, commitments and domain-to-domain protocols.</p></div>
+</div>
+<p>The Environment Model's definitions and economic framework are independent of ISTOTA. We would prefer to evaluate the software as it exists before proposing changes.</p>
+</section>
+<section class="content-section" id="scope"><div class="section-label">03 / Scope</div>
+<h2>Technical experiment first, partnership later—if warranted</h2>
+<p>We are <strong>not claiming</strong> that ISTOTA is already deployed on Archeonomus or that its developers are involved. The current reference to ISTOTA on this site was added independently, as a proposal for investigation.</p>
+<p>Any future use would need to respect the current software license, privacy and security requirements, and the project's own roadmap. A collaboration discussion would make sense only after an initial evaluation and mutual interest.</p>
+</section>
+<section class="content-section" id="test"><div class="section-label">04 / First practical step</div>
+<h2>One instance, one person, observable results</h2>
+<p>We propose beginning with <strong>a single test installation of ISTOTA</strong>, without modifying its code. The initial evaluation would examine whether it can reliably retain personal context, execute explicitly delegated tasks, keep records of actions and results, and export or restore the user's data.</p>
+<ul class="list-clean">
+<li>Deploy or access a self-hosted evaluation instance following maintainer recommendations.</li>
+<li>Create a sample personal domain with non-sensitive test data.</li>
+<li>Give it tasks with clear authorization limits and verify the outcomes.</li>
+<li>Document gaps between the observed behaviour and the proposed domain concept.</li>
+<li>Only then consider a second domain and controlled interaction between two users.</li>
+</ul>
+<div class="prose-block"><p><strong>One question for the ISTOTA team:</strong> Would you recommend an existing demo environment or an independent installation for this evaluation? What is the simplest supported starting point?</p></div>
+</section>
+<section class="content-section" id="status"><div class="section-label">05 / Current status</div>
+<h2>What exists today?</h2>
+<div class="domain-state">
+<p><strong>Available:</strong> Environment Model concept, this explanatory website page, links to the public ISTOTA project, and a proposed evaluation plan.</p>
+<p><strong>Not yet available:</strong> a running ISTOTA instance for Archeonomus, shared authentication, a functioning personal domain, an agreed technical integration, or a partnership with ISTOTA developers.</p>
+</div>
+<p>To learn about the original project, visit the <a href="https://istota.cynium.com/" target="_blank" rel="noopener noreferrer">ISTOTA website</a> or its <a href="https://github.com/istota-project/istota" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+<p><a href="domain.html" lang="uk">Read the Ukrainian version of our personal-domain page →</a></p>
+</section></div></div></main>
+<footer class="site-footer"><div class="shell"><p>Archeonomus · Independent Environment Model research</p><p class="small">This project is not affiliated with, sponsored by, or endorsed by the ISTOTA maintainers.</p></div></footer>
+</body></html>
