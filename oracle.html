@@ -271,7 +271,7 @@ function displaySourceName(name) {
   return original;
 }
 
-function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища", originalQuestion = "", engagementMode = "none", sourceIssue = null, relatedTopics = []) {
+function addMessage(role, content, sources = [], truncated = false, suggestions = [], engagementOffer = false, engagementFocus = "none", engagementTopic = "Модель середовища", originalQuestion = "", engagementMode = "none", sourceIssue = null, relatedTopics = [], testableIssue = null) {
   sources = [...new Set(sources.map(displaySourceName))];
   const placeholder = thread.querySelector(".empty");
   if (placeholder) placeholder.remove();
@@ -421,7 +421,9 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     const issueContext = isSourceIssue
       ? (displayIssueRefs.length ? displayIssueRefs.join(" і ") : "Матеріали Моделі") +
         ": " + sourceIssue.subject.slice(0, 160) : "";
-    const isDemo = (engagementFocus === "demo" || engagementMode === "demo") && !isSourceIssue;
+    const isTheoryTest = engagementMode === "theory_test" && testableIssue &&
+      typeof testableIssue.claim === "string" && typeof testableIssue.test === "string";
+    const isDemo = (engagementFocus === "demo" || engagementMode === "demo") && !isSourceIssue && !isTheoryTest;
     const isAuthorContact = engagementMode === "author_contact";
     link.href = "./?topic=" + encodeURIComponent(engagementTopic) +
       "&intent=" + encodeURIComponent(isDemo
@@ -429,10 +431,15 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
       (isDemo ? "&focus=demo" : "") +
       (isAuthorContact ? "&focus=author" : "") +
       (isSourceIssue ? "&issue=" + encodeURIComponent(issueContext) : "") +
+      (isTheoryTest ? "&issue=" + encodeURIComponent(
+        "Критична перевірка МС: " + testableIssue.claim.slice(0, 220) +
+        "; спосіб перевірки: " + testableIssue.test.slice(0, 250)) : "") +
       "#cooperation";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.textContent = isSourceIssue
+    link.textContent = isTheoryTest
+      ? "Долучитися до критичної перевірки МС у Демонстраційній моделі"
+      : isSourceIssue
       ? "Долучитися до усунення неузгодженості"
       : isAuthorContact
         ? "Відкрити форму звернення до автора"
@@ -442,7 +449,9 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
           ? "Долучитися до обговорення або перевірки Моделі"
           : "Підготувати пропозицію співпраці або критичного розгляду";
     const explanation = document.createElement("p");
-    explanation.textContent = isSourceIssue
+    explanation.textContent = isTheoryTest
+      ? "Виявлено перевірюване питання або прогалину, не доведене спростування. Можна запропонувати дані, сценарії або метод перевірки під час розроблення ДМС. Форма готує звернення для копіювання й не надсилає його."
+      : isSourceIssue
       ? "Потрібна незалежна звірка " +
         (displayIssueRefs.length ? displayIssueRefs.join(" та ") : "авторських документів") +
         ". Можна запропонувати аргументи або редакцію для розгляду автором. Форма готує текст для копіювання і не надсилає його."
@@ -523,7 +532,8 @@ async function askOracle(q, route = null) {
       q,
       typeof data.engagement_mode === "string" ? data.engagement_mode : "none",
       data.source_issue && typeof data.source_issue === "object" ? data.source_issue : null,
-      Array.isArray(data.related_topics) ? data.related_topics : []);
+      Array.isArray(data.related_topics) ? data.related_topics : [],
+      data.testable_issue && typeof data.testable_issue === "object" ? data.testable_issue : null);
     window.OracleAccess?.onAnswer?.(data);
     window.OracleAccess?.feedback?.(latestAnswer,data.answer_id);
     // Keep reading position at the START of the new answer,
