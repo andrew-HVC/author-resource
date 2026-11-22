@@ -64,7 +64,7 @@
     if(guest)guest.hidden=mode!=="guest";
     if(member)member.hidden=mode!=="member";
     const legacy=$("legacy-auth");
-    if(legacy)legacy.open=mode==="legacy"&&!state.config?.db_enabled;
+    if(legacy)legacy.open=mode==="legacy";
     const info=$("access-identity");
     if(info)info.textContent=mode==="member"?"Зареєстрований користувач":
       mode==="guest"?"Гостьова пробна сесія":"Тестовий доступ";
