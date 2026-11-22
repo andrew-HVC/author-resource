@@ -1174,8 +1174,8 @@ export default {
       return json({ error: "Access verification failed" }, 503);
     }
 
-    // Identity is intentionally private. Handle direct questions deterministically:
-    // do not let retrieval, model inference or source metadata reveal a person.
+    // Public authorial name is Археономус; private legal identity remains
+    // undisclosed. Direct authorship questions have a deterministic answer.
     // Inquiries into the principle of unified authorship are NOT identity queries.
     const asksAuthorIdentity =
       /(?:хто|чий|чиє|чиї)\s+.{0,75}(?:автор|розробник|творець|створив|розробив|запропонував|стоїть\s+за)/iu.test(question) ||
@@ -1193,7 +1193,7 @@ export default {
       !/модел[а-яіїєґ]*\s+середовищ/iu.test(question);
     if (asksAuthorIdentity && !clearlyDifferentWork) {
       return json({
-        answer: "Особа автора Моделі середовища не розкривається, але ви можете зв’язатися з ним через форму зворотного зв’язку.",
+        answer: "Автор Моделі середовища — Археономус. Це публічне авторське ім’я; особисті дані автора не розкриваються. Для зв’язку скористайтеся формою зворотного зв’язку.",
         sources: [],
         conversation_domain: typeof body.conversation_domain === "string" ? body.conversation_domain : "general",
         model_discovered: body.model_discovered === true || /модел[а-яіїєґ]*\s+середовищ/iu.test(question),
@@ -2524,14 +2524,17 @@ export default {
       "призначення, механізм і причинні взаємозв'язки."
     ].join(" ") : "";
     const authorPrivacyInstructions = [
-      "Конфіденційність автора: особа автора Моделі середовища не розкривається.",
-      "Не називай ім’я, прізвище, псевдонім, біографічні чи особисті",
-      "контактні дані автора, навіть якщо вони трапилися у джерелах,",
-      "метаданих, посиланнях або попередніх репліках.",
-      "На прямі запити про особу автора запропонуй форму зворотного зв’язку;",
-      "не стверджуй, що автора не вдалося знайти через брак даних.",
+      "Публічне авторське ім’я Моделі середовища — Археономус.",
+      "Коли відвідувач запитує, хто автор, називай Археономус.",
+      "Не приписуй цьому імені правовий статус чи біографію без джерел.",
+      "Справжня особистість автора залишається конфіденційною:",
+      "не називай реального імені, прізвища, біографічних даних,",
+      "особистих контактів або відомостей, які дозволяють",
+      "встановити особу автора, навіть якщо вони є у джерелах.",
+      "Для зв’язку з автором скеровуй до форми зворотного зв’язку.",
+      "Не кажи, що автор невідомий або що ім'я відсутнє в матеріалах.",
       "На запитання про принцип єдиного авторства пояснюй його зміст",
-      "без персоніфікації та без припущень щодо особи автора."
+      "окремо від приватної особи автора."
     ].join(" ");
     const asksSpatialInfluenceHierarchy =
       (phase === "model" || phase === "alternatives") &&
