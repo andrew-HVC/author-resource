@@ -78,7 +78,7 @@ const topicRules = [
 ];
 function classifyOracleQuestion(text) {
   const t=String(text||"");
-  for(const [topic,re] of topicRules)if(re.test(t))return topic;
+  for(const [topic,re] of topicRules)if(re instanceof RegExp && re.test(t))return topic;
   return "Загальні питання";
 }
 async function validateTurnstile(env,token,ip) {
@@ -2904,12 +2904,6 @@ export default {
     };
     const topic = domain;
     const fallbacks = {
-      economy: [
-        ["Як взаємне ускладнення потреб і виробничих можливостей змінює структуру економічної системи?",
-         "Чому якісно нові потреби можуть змінювати самі економічні відносини?"],
-        ["Які нові потреби та виробничі можливості можуть виникнути в економічних ланцюгах?",
-         "Як економічні дефіцити та взаємозалежності змінюють рішення підприємств?"]
-      ],
       recovery: [
         ["Як зміниться логіка відбудови, якщо спочатку дослідити екологічні та ресурсні можливості території?",
          "Чи мають природні умови та ресурсні обмеження впливати на майбутню структуру розселення ще до проєктування будівель?"],
