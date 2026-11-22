@@ -2682,18 +2682,20 @@ export default {
           instructions,
           input: [...history.map(x => ({ role: x.role, content: x.content })),
             { role: "user", content: queryForModel }],
-          ...(strategicExploration ? {} : {
-            tools: [{
-              type: "file_search",
-              vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
-              max_num_results: needsEconomicObjectComparison ||
-                asksSocioPoliticalClassification || asksCoercionRisk ||
-                asksEconomicFoundations || asksAnthropoStructure ? 12 : 8
-            }],
-            tool_choice: phase === "alternatives" || needsCanonicalSearch ||
-              asksEconomicFoundations || asksAnthropoStructure ? "required" : "auto"
-          }),
-          reasoning: { effort: "low" },
+          // Let the Oracle consult its source corpus even in open dialogue.
+          // Retrieval is optional for unrelated general questions; on subjects
+          // relevant to the Model, source search is mandatory from turn one.
+          tools: [{
+            type: "file_search",
+            vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
+            max_num_results: needsEconomicObjectComparison ||
+              asksSocioPoliticalClassification || asksCoercionRisk ||
+              asksEconomicFoundations || asksAnthropoStructure ? 12 : 8
+          }],
+          tool_choice: !strategicExploration || needsCanonicalSearch ||
+            asksEconomicFoundations || asksAnthropoStructure
+              ? "required" : "auto",
+          reasoning: { effort: "medium" },
           text: {
             format: {
               type: "json_schema",
@@ -2744,7 +2746,7 @@ export default {
               }
             }
           },
-          max_output_tokens: 2000,
+          max_output_tokens: 4000,
           store: false
         })
       });
