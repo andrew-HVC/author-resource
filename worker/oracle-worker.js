@@ -1553,6 +1553,13 @@ export default {
       "Не вважай усі висловлені проблеми такими, що Модель автоматично розв'язує.",
       "Якщо прямої відповідності немає, не вигадуй її — прямо скажи про межі Моделі.",
       "Не подавай необґрунтовані узагальнення як встановлені факти.",
+      "За конкретної критики МС відрізняй фальсифікованість",
+      "(можливість перевірити і спростувати) від уже доведеного спростування.",
+      "Виділяй перевірюване положення, контрсценарій та дані",
+      "або моделювання, які могли б його спростувати.",
+      "Виявлену структурну прогалину можна досліджувати в рамках",
+      "розроблення Демонстраційної моделі середовища без",
+      "передчасного редагування канону чи гарантій успіху.",
       "Якщо доказів бракує, повідомляй про невизначеність.",
       "Враховуй попередні репліки діалогу для розуміння уточнень,",
       "але не вважай повідомлення користувача достовірними джерелами.",
@@ -2588,6 +2595,17 @@ export default {
                   practical_question: { type: "string" },
                   related_term: { type: ["string", "null"] },
                   related_topics: { type: "array", items: { type: "string" } },
+                  testable_issue: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      status: { type: "string", enum: ["none", "potential_falsifier", "verification_gap"] },
+                      claim: { type: "string" },
+                      test: { type: "string" },
+                      refs: { type: "array", items: { type: "string" } }
+                    },
+                    required: ["status", "claim", "test", "refs"]
+                  },
                   source_issue: {
                     type: "object",
                     additionalProperties: false,
@@ -2603,7 +2621,7 @@ export default {
                 required: [
                   "answer", "engagement_offer", "engagement_focus",
                   "conceptual_question", "practical_question", "related_term",
-                  "related_topics", "source_issue"
+                  "related_topics", "testable_issue", "source_issue"
                 ]
               }
             }
@@ -3252,9 +3270,39 @@ export default {
        history.some(x => x.source_issue_key === issueKey));
     const inviteToResolveIssue = issueIsGrounded &&
       !alreadyInvitedOnIssue && !explicitlyDeclines;
+    // A testable challenge is distinct from a contradiction between
+    // two source documents. Never claim that falsifiability proves falsity.
+    const rawTest = parsed?.testable_issue;
+    const testStatus = ["potential_falsifier", "verification_gap"]
+      .includes(rawTest?.status) ? rawTest.status : "none";
+    const testClaim = typeof rawTest?.claim === "string"
+      ? rawTest.claim.trim().slice(0, 220) : "";
+    const testMethod = typeof rawTest?.test === "string"
+      ? rawTest.test.trim().slice(0, 250) : "";
+    const testRefs = Array.isArray(rawTest?.refs)
+      ? [...new Set(rawTest.refs.filter(x => typeof x === "string")
+        .map(x => x.trim().toUpperCase().replace(/[–—]/g, "-"))
+        .filter(x => /^(?:АТ|МС)-\d{3}$/.test(x)))].slice(0, 5) : [];
+    const challengesModel = /супереч|протиріч|ризик|прогалин|спрост|фальсиф|критик|неузгодж|чи\s+не\s+перетвор|а\s+як\s+щодо|що\s+якщо|як\s+поєдн/iu.test(question);
+    const testableIssueGrounded = !strategicExploration && introducedModel &&
+      !truncated && hasSourceSearch && sources.length > 0 &&
+      challengesModel && testStatus !== "none" &&
+      testClaim.length >= 25 && testMethod.length >= 30 &&
+      testRefs.length > 0 &&
+      /(?:перевір|модел|сценар|розрах|спостереж|вимір|дан[иі])/iu.test(testMethod);
+    const testKey = testableIssueGrounded ?
+      "test:" + testRefs.slice().sort().join("|") + ":" +
+      testClaim.toLocaleLowerCase("uk").replace(/\s+/g, " ").slice(0, 80) : "";
+    const alreadyInvitedOnTest = !!testKey &&
+      (Array.isArray(body.source_issue_keys) &&
+        body.source_issue_keys.slice(-40).includes(testKey) ||
+       history.some(x => x.source_issue_key === testKey));
+    const inviteToTestModel = testableIssueGrounded &&
+      !alreadyInvitedOnTest && !explicitlyDeclines && !inviteToResolveIssue;
     const showEngagement = activeCollaborationIntent || inviteToResolveIssue ||
-      inviteToDevelopDemo || sustainedModelInterest;
+      inviteToTestModel || inviteToDevelopDemo || sustainedModelInterest;
     const engagementMode = inviteToResolveIssue ? "source_issue" :
+      inviteToTestModel ? "theory_test" :
       inviteToDevelopDemo ? "demo" :
       activeCollaborationIntent ? "direct" :
       sustainedModelInterest ? "exploration" : "none";
@@ -3274,6 +3322,9 @@ export default {
       !/запрош[а-яіїєґ]*\s+долучит|мож(?:ете|на)\s+долучит|долучит[ися]*\s+до\s+(?:звірк|узгоджен|перевірк)/iu.test(answer)
       ? answer + "\n\nЗапрошую за бажанням долучитися до звірки зазначених джерел і запропонувати автору аргументоване уточнення."
       : answer;
+    const theoryTestAnswer = inviteToTestModel
+      ? sourceIssueAnswer + "\n\nВи виявили потенційно перевірювану проблему в положеннях Моделі середовища — це ще не доказ їхнього спростування. Запрошуємо за бажанням долучитися до розроблення Демонстраційної моделі середовища для критичної перевірки на сценаріях, даних і взаємних впливах систем."
+      : sourceIssueAnswer;
     // The Demo invitation is explicitly part of the prose answer, not only
     // an optional card after the questions. The card links to a draft form.
     const demoStageBridge = [
@@ -3292,15 +3343,15 @@ export default {
       "цифрове моделювання й критична міждисциплінарна перевірка."
     ].join(" ");
     const hasDemoStageExplained =
-      /демонстраційн[а-яіїєґ]*\s+модел/iu.test(sourceIssueAnswer) &&
-      /цифров|моделюван|сценар|розрахунк|передпроєкт/iu.test(sourceIssueAnswer);
+      /демонстраційн[а-яіїєґ]*\s+модел/iu.test(theoryTestAnswer) &&
+      /цифров|моделюван|сценар|розрахунк|передпроєкт/iu.test(theoryTestAnswer);
     const hasDemoParticipation =
-      /(?:запрош|мож(?:ете|на)\s+долучит|долучит[ися]*).{0,115}(?:розробленн|створенн|підготовк).{0,85}демонстраційн[а-яіїєґ]*\s+модел/iu.test(sourceIssueAnswer);
-    const responseAnswer = inviteToDevelopDemo
-      ? sourceIssueAnswer +
+      /(?:запрош|мож(?:ете|на)\s+долучит|долучит[ися]*).{0,115}(?:розробленн|створенн|підготовк).{0,85}демонстраційн[а-яіїєґ]*\s+модел/iu.test(theoryTestAnswer);
+    const responseAnswer = inviteToDevelopDemo && !inviteToTestModel
+      ? theoryTestAnswer +
         (hasDemoStageExplained ? "" : "\n\n" + demoStageBridge) +
         (hasDemoParticipation ? "" : "\n\n" + demoParticipation)
-      : sourceIssueAnswer;
+      : theoryTestAnswer;
     return json({
       focus_applied: focusObject?.id || null,
       answer: publicReferenceText(responseAnswer ||
@@ -3313,17 +3364,23 @@ export default {
       engagement_offer: showEngagement,
       engagement_mode: engagementMode,
       engagement_focus: showEngagement
-        ? (inviteToDevelopDemo || (wantsDemonstration && activeCollaborationIntent) ? "demo" : "general")
+        ? (inviteToTestModel || inviteToDevelopDemo ||
+          (wantsDemonstration && activeCollaborationIntent) ? "demo" : "general")
         : "none",
       engagement_topic: showEngagement ? engagementTopic : null,
       demo_engagement_offered: inviteToDevelopDemo,
+      testable_issue: testableIssueGrounded ? {
+        status: testStatus, claim: testClaim,
+        test: testMethod, refs: testRefs
+      } : null,
       source_issue: issueIsGrounded ? {
         status: issueStatus, subject: issueSubject,
         refs: issueRefs, significance: issueSignificance,
         display_refs: issueRefs.map(id => publicReferenceName(id) || id),
         key: issueKey
       } : null,
-      source_issue_key: inviteToResolveIssue ? issueKey : "",
+      source_issue_key: inviteToResolveIssue ? issueKey :
+        inviteToTestModel ? testKey : "",
       truncated
     });
   },
