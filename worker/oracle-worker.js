@@ -1611,16 +1611,11 @@ export default {
       "Не підмінюй основну відповідь анонсом наступної теми:",
       "плашки розвивають наявний зміст, а не випереджають його.",
       "Не додавай непідтверджених деталей лише заради плашки.",
-      "ОКРЕМО від двох наступних питань сформуй related_topics:",
-      "від двох до чотирьох коротких назв пов'язаних тем МС,",
-      "які безпосередньо пояснені у відповіді або логічно",
-      "пов'язані з нею через підтверджені джерела.",
-      "Це тематичні переходи, НЕ ще одні запитання.",
-      "Не вигадуй термінів, не повторюй ту саму тему синонімами,",
-      "не змінюй галузь лише через побіжну згадку в тексті.",
-      "Для теми відбудови доречними можуть бути екологічний каркас,",
-      "Стратегія впливу, несуча здатність та Демонстраційна модель,",
-      "але тільки якщо вони відповідають змісту конкретної відповіді.",
+      "Після відповіді окрема навігація «Пов’язані епістеми»",
+      "формується сервером із перевіреного реєстру заголовків",
+      "статей МС. Не вигадуй назви й не додавай їх у answer.",
+      "Поле related_topics залишай порожнім масивом: сервер",
+      "визначає пов'язані епістеми самостійно.",
       "Відвідувач може продовжувати діалог власним запитанням, не з плашки.",
       "Якщо в такому запитанні є «це», «така організація», «а що з...»,",
       "пояснюй із контексту попередніх реплік без вимоги назвати",
@@ -3185,30 +3180,96 @@ export default {
         suggestions.push({ kind: "term", label: term, query });
     }
 
-    // Related topics are short, source-grounded cross-links, distinct
-    // from the two forward-moving follow-up questions. Clicking one
-    // asks for an explanation in the existing conversation.
-    const relatedTopics = [];
-    const topicSeen = new Set();
-    for (const raw of (Array.isArray(parsed?.related_topics)
-      ? parsed.related_topics : [])) {
-      if (typeof raw !== "string") continue;
-      const label = raw.replace(/\s+/g, " ").trim().slice(0, 64);
-      const key = label.toLocaleLowerCase("uk");
-      if (!label || label.length < 3 || topicSeen.has(key) ||
-          /[?!\n\r]/.test(label)) continue;
-      // The returned concept should be present in the answer or the
-      // visitor's question; do not surface free-floating generated tags.
-      const transcript = (answer + " " + question).toLocaleLowerCase("uk");
-      if (!transcript.includes(key)) continue;
-      topicSeen.add(key);
-      relatedTopics.push({
-        label,
-        query: "Поясни, як тема «" + label +
-          "» пов’язана з попередньою відповіддю та Моделлю середовища."
-      });
-      if (relatedTopics.length === 4) break;
+    // Stable article navigation: episteme titles are selected from the
+    // verified reference register, NOT invented or copied verbatim by the model.
+    // Thus the section is present for every Oracle answer, independently of
+    // the language inflection or whether a title is quoted in the answer.
+    const epistemeEntries = Object.entries(REFERENCE_TITLES)
+      .filter(([id]) => id.startsWith("МС-"));
+    const epistemeStopwords = new Set([
+      "модел", "серед", "систем", "орган", "проєк", "конце",
+      "питан", "вплив", "загал", "основ", "харак", "прост",
+      "терит", "розви", "форму", "визна", "функц", "класт"
+    ]);
+    const epistemeTokens = value =>
+      (String(value || "").toLocaleLowerCase("uk").match(/[а-яіїєґa-z0-9]+/gu) || [])
+        .filter(w => w.length >= 5).map(w => w.slice(0, 5));
+    const questionTokens = new Set(epistemeTokens(question));
+    const answerTokens = new Set(epistemeTokens(answer));
+    const topicalText = (question + " " + answer).toLocaleLowerCase("uk");
+    const topicScores = new Map();
+    const addTopicScore = (id, score) => {
+      if (REFERENCE_TITLES[id]) topicScores.set(id,
+        (topicScores.get(id) || 0) + score);
+    };
+    for (const [id, title] of epistemeEntries) {
+      let score = 0;
+      const tokens = [...new Set(epistemeTokens(title))]
+        .filter(t => !epistemeStopwords.has(t));
+      for (const t of tokens) {
+        if (questionTokens.has(t)) score += 4;
+        if (answerTokens.has(t)) score += 2;
+      }
+      if (tokens.length > 0 && tokens.every(t => questionTokens.has(t)))
+        score += 6;
+      if (topicalText.includes(title.toLocaleLowerCase("uk"))) score += 9;
+      if (score) addTopicScore(id, score);
     }
+    // Conceptual anchors compensate for Ukrainian inflections and for
+    // closely linked articles whose titles lack identical vocabulary.
+    const epistemeAnchors = [
+      [/екологічн|екокаркас|природн.{0,25}(?:меж|умов)|екосистем/iu,
+        ["МС-022","МС-019","МС-017","МС-020"]],
+      [/енергет|гідроакумул|вдє|сонячн/iu,
+        ["МС-026","МС-025"]],
+      [/інфраструктур|транспорт|коридор/iu,
+        ["МС-028","МС-027","МС-029"]],
+      [/несуч.{0,12}здатн|населен|демограф|заселен/iu,
+        ["МС-024","МС-037","МС-030"]],
+      [/дефіцит|спроможн|фрактальн|нов.{0,18}потреб/iu,
+        ["МС-071","МС-085","МС-084","МС-082"]],
+      [/кластер|міжкластер|самодостатн/iu,
+        ["МС-037","МС-082","МС-042"]],
+      [/біотехнолог|агровироб|продовольств|мультикультур/iu,
+        ["МС-034","МС-035","МС-033"]],
+      [/цифров.{0,20}коп|пісочниц|сценарн.{0,18}модел/iu,
+        ["МС-038","МС-044","МС-078"]],
+      [/стратег|ієрарх|визначальн.{0,18}вплив/iu,
+        ["МС-010","МС-003","МС-017"]],
+      [/відбудов|фенікс|зруйнован/iu,
+        ["МС-051","МС-052"]],
+      [/соціальн|громад|врядуван/iu,
+        ["МС-040","МС-066","МС-041"]]
+    ];
+    for (const [rx, ids] of epistemeAnchors)
+      if (rx.test(topicalText)) ids.forEach((id, i) => addTopicScore(id, 14 - i * 3));
+    // The current question is more relevant than a broad answer which
+    // may mention many adjacent concepts. The first entries in a tie use
+    // canonical registration order, ensuring deterministic display.
+    const domainFallbacks = {
+      economy: ["МС-071","МС-085","МС-084","МС-069"],
+      recovery: ["МС-052","МС-051","МС-022","МС-010"],
+      energy: ["МС-026","МС-025","МС-022","МС-028"],
+      transport: ["МС-028","МС-029","МС-027","МС-017"],
+      agriculture: ["МС-034","МС-033","МС-035","МС-022"],
+      social: ["МС-040","МС-066","МС-037","МС-043"],
+      territory: ["МС-017","МС-022","МС-028","МС-024"],
+      general: ["МС-004","МС-054","МС-010","МС-015"]
+    };
+    const fallback = domainFallbacks[domain] || domainFallbacks.general;
+    fallback.forEach((id, i) => {
+      if (!topicScores.size) addTopicScore(id, 4 - i);
+    });
+    const relatedTopics = [...topicScores.entries()]
+      .sort((a,b) => b[1] - a[1] ||
+        a[0].localeCompare(b[0], "uk"))
+      .slice(0, 4)
+      .map(([id]) => ({
+        id,
+        label: REFERENCE_TITLES[id],
+        query: "Поясни зміст епістеми «" + REFERENCE_TITLES[id] +
+          "» та її зв’язок із попередньою дискусією. Спирайся на чинні матеріали Моделі середовища."
+      }));
 
     // Two distinct invitation modes:
     // explicit willingness can surface from the FIRST turn, while sustained
@@ -3396,7 +3457,7 @@ export default {
       conversation_domain: domain,
       model_discovered: introducedModel || (modelDiscovered && !explicitNewTopic),
       suggestions,
-      related_topics: introducedModel ? relatedTopics : [],
+      related_topics: relatedTopics,
       engagement_offer: showEngagement,
       engagement_mode: engagementMode,
       engagement_focus: showEngagement
