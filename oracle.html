@@ -579,9 +579,15 @@ async function askOracle(q, route = null) {
         showGuestLimitNotice();
         return;
       }
-      status.textContent = "Помилка " + response.status + ": " +
-        (data.error || "Запит не виконано") +
-        (data.status ? " (API: " + data.status + ")" : "");
+      const legacyTokenBlocked = response.status === 401 &&
+        /Sign in or start a guest session/i.test(String(data.error || "")) &&
+        document.querySelector('#access-tabs [data-mode="legacy"]')
+          ?.getAttribute("aria-pressed") === "true";
+      status.textContent = legacyTokenBlocked
+        ? "Тестовий пароль відхилено сервером. Якщо увімкнено базу D1, для службового тестування потрібно встановити у Cloudflare Worker змінну ALLOW_LEGACY_TEST_MODE = true (Settings → Variables and Secrets), зберегти зміни й повторити запит. Не публікуйте тестовий пароль."
+        : "Помилка " + response.status + ": " +
+          (data.error || "Запит не виконано") +
+          (data.status ? " (API: " + data.status + ")" : "");
       return;
     }
     const focusNotApplied=Boolean(focusContext&&data.focus_applied!==focusContext);
