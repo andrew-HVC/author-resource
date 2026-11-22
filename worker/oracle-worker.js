@@ -1604,6 +1604,16 @@ export default {
       "Не підмінюй основну відповідь анонсом наступної теми:",
       "плашки розвивають наявний зміст, а не випереджають його.",
       "Не додавай непідтверджених деталей лише заради плашки.",
+      "ОКРЕМО від двох наступних питань сформуй related_topics:",
+      "від двох до чотирьох коротких назв пов'язаних тем МС,",
+      "які безпосередньо пояснені у відповіді або логічно",
+      "пов'язані з нею через підтверджені джерела.",
+      "Це тематичні переходи, НЕ ще одні запитання.",
+      "Не вигадуй термінів, не повторюй ту саму тему синонімами,",
+      "не змінюй галузь лише через побіжну згадку в тексті.",
+      "Для теми відбудови доречними можуть бути екологічний каркас,",
+      "Стратегія впливу, несуча здатність та Демонстраційна модель,",
+      "але тільки якщо вони відповідають змісту конкретної відповіді.",
       "Відвідувач може продовжувати діалог власним запитанням, не з плашки.",
       "Якщо в такому запитанні є «це», «така організація», «а що з...»,",
       "пояснюй із контексту попередніх реплік без вимоги назвати",
@@ -2577,6 +2587,7 @@ export default {
                   conceptual_question: { type: "string" },
                   practical_question: { type: "string" },
                   related_term: { type: ["string", "null"] },
+                  related_topics: { type: "array", items: { type: "string" } },
                   source_issue: {
                     type: "object",
                     additionalProperties: false,
@@ -2592,7 +2603,7 @@ export default {
                 required: [
                   "answer", "engagement_offer", "engagement_focus",
                   "conceptual_question", "practical_question", "related_term",
-                  "source_issue"
+                  "related_topics", "source_issue"
                 ]
               }
             }
@@ -3120,6 +3131,31 @@ export default {
         suggestions.push({ kind: "term", label: term, query });
     }
 
+    // Related topics are short, source-grounded cross-links, distinct
+    // from the two forward-moving follow-up questions. Clicking one
+    // asks for an explanation in the existing conversation.
+    const relatedTopics = [];
+    const topicSeen = new Set();
+    for (const raw of (Array.isArray(parsed?.related_topics)
+      ? parsed.related_topics : [])) {
+      if (typeof raw !== "string") continue;
+      const label = raw.replace(/\s+/g, " ").trim().slice(0, 64);
+      const key = label.toLocaleLowerCase("uk");
+      if (!label || label.length < 3 || topicSeen.has(key) ||
+          /[?!\n\r]/.test(label)) continue;
+      // The returned concept should be present in the answer or the
+      // visitor's question; do not surface free-floating generated tags.
+      const transcript = (answer + " " + question).toLocaleLowerCase("uk");
+      if (!transcript.includes(key)) continue;
+      topicSeen.add(key);
+      relatedTopics.push({
+        label,
+        query: "Поясни, як тема «" + label +
+          "» пов’язана з попередньою відповіддю та Моделлю середовища."
+      });
+      if (relatedTopics.length === 4) break;
+    }
+
     // Two distinct invitation modes:
     // explicit willingness can surface from the FIRST turn, while sustained
     // inquiry into the author's Model can justify one optional invitation
@@ -3273,6 +3309,7 @@ export default {
       conversation_domain: domain,
       model_discovered: introducedModel || (modelDiscovered && !explicitNewTopic),
       suggestions,
+      related_topics: introducedModel ? relatedTopics : [],
       engagement_offer: showEngagement,
       engagement_mode: engagementMode,
       engagement_focus: showEngagement
