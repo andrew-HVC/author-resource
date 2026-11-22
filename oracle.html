@@ -376,15 +376,14 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
     }
   }
 
-  // Related topics are concise lateral links, not another pair of
-  // follow-up questions. Keep them beneath the questions and outside
-  // their navigation-route state.
+  // Related episteme article links are stable on EVERY answer.
+  // Labels are canonical article titles supplied by the Worker.
   if (role === "assistant" && Array.isArray(relatedTopics) && relatedTopics.length) {
     const section = document.createElement("div");
     section.className = "related-concepts";
     const heading = document.createElement("p");
     heading.className = "related-title";
-    heading.textContent = "Пов’язані теми";
+    heading.textContent = "Пов’язані епістеми";
     const tags = document.createElement("div");
     tags.className = "related-concept-list";
     for (const item of relatedTopics.slice(0, 4)) {
@@ -395,8 +394,8 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
       chip.type = "button";
       chip.className = "related-concept";
       chip.textContent = item.label;
-      chip.title = "Дослідити тему: " + item.label;
-      chip.setAttribute("aria-label", "Дослідити тему: " + item.label);
+      chip.title = "Відкрити епістему: " + item.label;
+      chip.setAttribute("aria-label", "Дізнатися про епістему: " + item.label);
       chip.addEventListener("click", () => askOracle(item.query, null));
       tags.append(chip);
     }
