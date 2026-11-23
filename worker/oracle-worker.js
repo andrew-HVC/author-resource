@@ -3666,11 +3666,35 @@ export default {
       !demoAlreadyExplainedInAnswer && !explicitlyDeclines
       ? theoryTestAnswer + "\n\n" + feniksDemoCall
       : theoryTestAnswer;
-    const responseAnswer = inviteToDevelopDemo && !inviteToTestModel
-      ? withFeniksDemoCall +
-        (hasDemoStageExplained || isFeniksRebuildingInquiry ? "" : "\n\n" + demoStageBridge) +
-        (hasDemoParticipation || isFeniksRebuildingInquiry ? "" : "\n\n" + demoParticipation)
+    // Investment-environment inquiries need a concrete research-stage route.
+    // Participation in DMS research is not a purchase of a security or a
+    // promise of future investment returns.
+    const isModelInvestmentEnvironmentInquiry = introducedModel &&
+      /інвестиц|інвестор|інвестуван|інвестиційн|капіталовкладенн|фінансуван/iu.test(question) &&
+      /середовищ|пол[еяюі]|модел|майбутн|можливост|спроможност/iu.test(question);
+    const investmentDemoBridge = [
+      "**Практичний крок до створення такого інвестиційного середовища —",
+      "[Демонстраційна модель середовища](https://andrew-hvc.github.io/author-resource/demo.html) (ДМС).**",
+      "На цій дослідницькій стадії потрібно залучити фахівців,",
+      "створити інтегровану цифрову модель, перевірити залежності,",
+      "дефіцити, сценарії та підготувати технічне завдання.",
+      "Зацікавлені у майбутньому інвестиційному середовищі можуть",
+      "підтримати підготовку й розроблення ДМС або запропонувати",
+      "експертизу й партнерство через",
+      "[форму співпраці Archeonomus](https://andrew-hvc.github.io/author-resource/?focus=demo#cooperation).",
+      "Це фінансування дослідження та розроблення, не придбання",
+      "готового активу; дохідність чи повернення коштів не обіцяються."
+    ].join(" ");
+    const withInvestmentDemo = isModelInvestmentEnvironmentInquiry &&
+      !explicitlyDeclines &&
+      !/https:\/\/andrew-hvc\.github\.io\/author-resource\/demo\.html/i.test(withFeniksDemoCall)
+      ? withFeniksDemoCall + "\n\n" + investmentDemoBridge
       : withFeniksDemoCall;
+    const responseAnswer = inviteToDevelopDemo && !inviteToTestModel
+      ? withInvestmentDemo +
+        (hasDemoStageExplained || isFeniksRebuildingInquiry || isModelInvestmentEnvironmentInquiry ? "" : "\n\n" + demoStageBridge) +
+        (hasDemoParticipation || isFeniksRebuildingInquiry || isModelInvestmentEnvironmentInquiry ? "" : "\n\n" + demoParticipation)
+      : withInvestmentDemo;
     return json({
       focus_applied: focusObject?.id || null,
       answer: publicReferenceText(responseAnswer ||
