@@ -3508,12 +3508,22 @@ export default {
       /(?:домен|самокеруван)/iu.test(question) &&
       /(?:делегуван|делегувала|повноважен|без\s+окремого\s+підтверджен|кожн[а-яіїєґ]*\s+операці|смартконтракт|зобов['’]язан)/iu.test(question) &&
       /(?:запит|контракт|операці|спроможн|економічн)/iu.test(question);
+    // A cancelled upstream request with downstream commitments is a
+    // production-chain coordination problem, not merely a personal-domain
+    // delegation problem. Keep the articles at the level of the full chain.
+    const cascadingProductionCommitmentInquiry =
+      /(?:виробнич[а-яіїєґ]*\s+ланцюг|постачальник|постачальників|каскад|перенаправлен[а-яіїєґ]*\s+ресурс)/iu.test(question) &&
+      /(?:відклик|скасув|зобов['’]язан|перебуд|перепланув|резервув)/iu.test(question) &&
+      /(?:запит|домен|виробник|ресурс|операці)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : personalDomainDelegationInquiry
-        ? ["МС-067", "МС-079", "МС-085", "МС-048"].map(id =>
+      : cascadingProductionCommitmentInquiry
+        ? ["МС-050", "МС-086", "МС-085", "МС-071"].map(id =>
             [id, topicScores.get(id) || 0])
+        : personalDomainDelegationInquiry
+          ? ["МС-067", "МС-079", "МС-085", "МС-048"].map(id =>
+              [id, topicScores.get(id) || 0])
         : personalDomainControlInquiry
           ? ["МС-067", "МС-079", "МС-087", "МС-088"].map(id =>
               [id, topicScores.get(id) || 0])
