@@ -3750,7 +3750,7 @@ export default {
       "Форма готує звернення для копіювання, а не надсилає його автоматично."
     ].join(" ");
     const responseAnswer = planningDmsFunding && !explicitlyDeclines &&
-      !/andrew-hvc\\.github\\.io\\/author-resource\\/\\?/i.test(baseResponseAnswer)
+      !/andrew-hvc\.github\.io\/author-resource\/\?/i.test(baseResponseAnswer)
       ? baseResponseAnswer + "\n\n" + planningDmsContact
       : baseResponseAnswer;
     return json({
