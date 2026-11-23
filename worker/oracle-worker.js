@@ -2670,7 +2670,7 @@ export default {
     // External technology example from the public Archeonomus updates feed.
     // This is reference material, NOT part of the canonical Environment Model.
     const asksPersonalDomainTechnology =
-      /(?:istota|істот[аиі]|самокерован[а-яіїєґ]*\\s+домен|персональн[а-яіїєґ]*\\s+домен|особист[а-яіїєґ]*\\s+ші|персональн[а-яіїєґ]*\\s+ші|автономн[а-яіїєґ]*\\s+(?:агент|домен)|міждоменн[а-яіїєґ]*)/iu.test(
+      /(?:istota|істот[аиі]|самокерован[а-яіїєґ]*\s+домен|персональн[а-яіїєґ]*\s+домен|особист[а-яіїєґ]*\s+ші|персональн[а-яіїєґ]*\s+ші|автономн[а-яіїєґ]*\s+(?:агент|домен)|міждоменн[а-яіїєґ]*)/iu.test(
         [question, ...userTurns.slice(-2).map(x => x.content)].join(" ")
       );
     const istotaExampleInstructions = [
