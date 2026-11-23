@@ -3585,12 +3585,22 @@ export default {
       /(?:редемпц|реалізува[а-яіїєґ]*\s+(?:це\s+)?прав|фактичн[а-яіїєґ]*\s+виконанн[а-яіїєґ]*\s+через\s+редемпц)/iu.test(question) &&
       /(?:економічн[а-яіїєґ]*\s+прав|внесок|урожай|продукт|послуг)/iu.test(question) &&
       /(?:отримат|отримую|виростив|передав|створен|підтверджен|облік)/iu.test(question);
+    // Cross-chain choice is not a privacy/security verification question.
+    // The visitor asks whether productive contribution in one chain can
+    // support another need without treating KWATT as universal money.
+    const crossChainEconomicChoiceInquiry =
+      /(?:ланцюг|виробнич[а-яіїєґ]*\s+ланцюг)/iu.test(question) &&
+      /(?:інш[а-яіїєґ]*\s+(?:потреб|ланцюг|послуг|продукц|виріб)|стоматолог|велосипед|свобод[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+вибор)/iu.test(question) &&
+      /(?:економічн[а-яіїєґ]*\s+прав|прям[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+облік|внесок|реалізува)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : earnedEconomicRightRedemptionInquiry
-        ? ["МС-076", "МС-086", "МС-079", "МС-084"].map(id =>
+      : crossChainEconomicChoiceInquiry
+        ? ["МС-079", "МС-076", "МС-084", "МС-085"].map(id =>
             [id, topicScores.get(id) || 0])
+        : earnedEconomicRightRedemptionInquiry
+          ? ["МС-076", "МС-086", "МС-079", "МС-084"].map(id =>
+              [id, topicScores.get(id) || 0])
         : personalWorkEconomicOutcomeInquiry
           ? ["МС-079", "МС-076", "МС-086", "МС-084"].map(id =>
               [id, topicScores.get(id) || 0])
