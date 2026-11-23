@@ -3522,12 +3522,24 @@ export default {
       /(?:дефіцитн|дефіцит|обмежен[а-яіїєґ]*\s+(?:ресурс|спроможн)|конкуруюч[а-яіїєґ]*\s+запит)/iu.test(question) &&
       /(?:пріоритет|розподіл|розподільник|вистачає\s+лише|на\s+один|одночасно|оскарж)/iu.test(question) &&
       /(?:домен|запит|виробнич|ресурс|спроможн)/iu.test(question);
+    // Turning a persistent production-capacity deficit into a project is
+    // an economic-initiative / investment-field question. Do not let
+    // incidental mentions of the governing digital copy dominate related
+    // articles about who initiates, funds and realizes new capacity.
+    const productiveCapacityInitiativeInquiry =
+      /(?:дефіцит|спроможн)/iu.test(question) &&
+      /(?:ініціатив|проєкт|реалізаці|ресурс|відповідальн)/iu.test(question) &&
+      /(?:хто|економічн|інвест|централізован)/iu.test(question) &&
+      /(?:створенн|нов[а-яіїєґ]*\s+виробництв|усуненн|альтернатив)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : scarceCapacityPriorityInquiry
-        ? ["МС-085", "МС-082", "МС-083", "МС-071"].map(id =>
+      : productiveCapacityInitiativeInquiry
+        ? ["МС-085", "МС-071", "МС-057", "МС-056"].map(id =>
             [id, topicScores.get(id) || 0])
+        : scarceCapacityPriorityInquiry
+          ? ["МС-085", "МС-082", "МС-083", "МС-071"].map(id =>
+              [id, topicScores.get(id) || 0])
         : cascadingProductionCommitmentInquiry
           ? ["МС-050", "МС-086", "МС-085", "МС-071"].map(id =>
               [id, topicScores.get(id) || 0])
