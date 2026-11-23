@@ -3827,9 +3827,15 @@ export default {
       introducedModel && /демонстраційн[а-яіїєґ]*\s+модел|демомодел/iu.test(question);
     const demoPreviouslyInvited = body.demo_engagement_shown === true ||
       history.some(x => x.demo_engagement_offered);
+    // After a visitor has explored the spatial alternative across several
+    // turns, DMS is the concrete next step for testing the proposal. Do not
+    // require the literal word "benefits" in the latest question: visitors
+    // naturally ask how planning or reconstruction would change.
+    const spatialDevelopmentInquiry =
+      /(?:плануван|розселен|відбудов|відновлен|природн|екологічн|територ|інфраструктур|просторов|несуч[а-яіїєґ]*\s+здатн|енергет)/iu.test(question);
     const invitesDemoFromSpatialInquiry = !explicitlyDeclines &&
       introducedModel && modelDiscovered && phase === "model" &&
-      hasSpatialModelContext && asksSpatialBenefits &&
+      hasSpatialModelContext && spatialDevelopmentInquiry &&
       modelFollowupCount >= 2;
     const directDemoInterest = !explicitlyDeclines && activeCollaborationIntent &&
       wantsDemonstration;
