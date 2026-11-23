@@ -3494,13 +3494,22 @@ export default {
       // references to transport or infrastructure in an LLM answer.
       anchors.forEach((id, i) => addTopicScore(id, 1000 - i * 30));
     }
+    // A question about a person's control of a digital domain must not
+    // be rerouted to the physical linear infrastructure by incidental
+    // mentions of "digital infrastructure" or its operator.
+    const personalDomainControlInquiry =
+      /(?:персональн[а-яіїєґ]*\s+домен|особист[а-яіїєґ]*\s+домен|самокерован[а-яіїєґ]*\s+(?:цифров[а-яіїєґ]*\s+)?домен|(?:^|[^\p{L}])домен(?:у|ом|і|а)?(?:$|[^\p{L}]))/iu.test(question) &&
+      /(?:контрол|оператор|постачальник|повноважен|доступ|автоном|самокеруван|приватн|ключ|дані|даних)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : [...topicScores.entries()]
-          .sort((a,b) => b[1] - a[1] ||
-            a[0].localeCompare(b[0], "uk"))
-          .slice(0, 4);
+      : personalDomainControlInquiry
+        ? ["МС-067", "МС-079", "МС-087", "МС-088"].map(id =>
+            [id, topicScores.get(id) || 0])
+        : [...topicScores.entries()]
+            .sort((a,b) => b[1] - a[1] ||
+              a[0].localeCompare(b[0], "uk"))
+            .slice(0, 4);
     const relatedTopics = relatedTopicEntries
       .map(([id]) => ({
         id,
