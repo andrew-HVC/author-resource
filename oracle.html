@@ -572,7 +572,9 @@ async function askOracle(q, route = null) {
   question.disabled = true;
   restart.disabled = true;
   document.querySelectorAll(".topic-chip, .related-concept").forEach(chip => chip.disabled = true);
-  status.textContent = "Оракул опрацьовує запит…";
+  // The centered thinking overlay is the sole progress indicator.
+  // Keep this area clear for errors and actionable notices.
+  status.textContent = "";
   guestLimitNotice.hidden=true;
   setThinking(true);
   try {
