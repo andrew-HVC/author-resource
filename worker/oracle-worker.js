@@ -3578,12 +3578,22 @@ export default {
       /(?:керуюч[а-яіїєґ]*\s+норм|перегляд[а-яіїєґ]*\s+(?:спільн[а-яіїєґ]*\s+)?правил)/iu.test(question) &&
       /(?:кластерн[а-яіїєґ]*\s+громад|громад[а-яіїєґ]*)/iu.test(question) &&
       /(?:відмов|відхил|блокув|оскарж|обґрунтуван|обґрунтован)/iu.test(question);
+    // A concrete earned right and its redemption are about entitlement
+    // fulfillment, not privacy merely because a personal domain and
+    // verification are mentioned in the same question.
+    const earnedEconomicRightRedemptionInquiry =
+      /(?:редемпц|реалізува[а-яіїєґ]*\s+(?:це\s+)?прав|фактичн[а-яіїєґ]*\s+виконанн[а-яіїєґ]*\s+через\s+редемпц)/iu.test(question) &&
+      /(?:економічн[а-яіїєґ]*\s+прав|внесок|урожай|продукт|послуг)/iu.test(question) &&
+      /(?:отримат|отримую|виростив|передав|створен|підтверджен|облік)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : personalWorkEconomicOutcomeInquiry
-        ? ["МС-079", "МС-076", "МС-086", "МС-084"].map(id =>
+      : earnedEconomicRightRedemptionInquiry
+        ? ["МС-076", "МС-086", "МС-079", "МС-084"].map(id =>
             [id, topicScores.get(id) || 0])
+        : personalWorkEconomicOutcomeInquiry
+          ? ["МС-079", "МС-076", "МС-086", "МС-084"].map(id =>
+              [id, topicScores.get(id) || 0])
       : normativeInitiativeRejectionInquiry
         ? ["МС-077", "МС-078", "МС-079", "МС-075"].map(id =>
             [id, topicScores.get(id) || 0])
