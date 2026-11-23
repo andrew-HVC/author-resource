@@ -3725,9 +3725,9 @@ export default {
       "Це фінансування дослідження та розроблення, не придбання",
       "готового активу; дохідність чи повернення коштів не обіцяються."
     ].join(" ");
-    const alreadyDirectsToDms = /демонстраційн[а-яіїєґ]*\\s+модел/iu.test(withFeniksDemoCall) &&
+    const alreadyDirectsToDms = /демонстраційн[а-яіїєґ]*\s+модел/iu.test(withFeniksDemoCall) &&
       /(?:сторінк|форму|посиланн|долучит|фінансуван|інвестиц)/iu.test(withFeniksDemoCall) &&
-      /andrew-hvc\\.github\\.io\\/author-resource\\//i.test(withFeniksDemoCall);
+      /andrew-hvc\.github\.io\/author-resource\//i.test(withFeniksDemoCall);
     const withInvestmentDemo = isModelInvestmentEnvironmentInquiry &&
       !planningDmsFunding && !explicitlyDeclines && !alreadyDirectsToDms &&
       !/https:\/\/andrew-hvc\.github\.io\/author-resource\/demo\.html/i.test(withFeniksDemoCall)
