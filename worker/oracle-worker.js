@@ -3645,11 +3645,31 @@ export default {
       /цифров|моделюван|сценар|розрахунк|передпроєкт/iu.test(theoryTestAnswer);
     const hasDemoParticipation =
       /(?:запрош|мож(?:ете|на)\s+долучит|долучит[ися]*).{0,115}(?:розробленн|створенн|підготовк).{0,85}демонстраційн[а-яіїєґ]*\s+модел/iu.test(theoryTestAnswer);
-    const responseAnswer = inviteToDevelopDemo && !inviteToTestModel
-      ? theoryTestAnswer +
-        (hasDemoStageExplained ? "" : "\n\n" + demoStageBridge) +
-        (hasDemoParticipation ? "" : "\n\n" + demoParticipation)
+    // For rebuilding/Feniks questions, explicitly connect territorial
+    // verification to the Demonstration Model in the first relevant answer.
+    const isFeniksRebuildingInquiry = introducedModel &&
+      /(?:тотальн[а-яіїєґ]*\\s+зруйнован|зруйнован[а-яіїєґ]*\\s+(?:територ|міст)|відбудов|відновлен[а-яіїєґ]*\\s+(?:міст|територ)|фенікс)/iu.test(question) &&
+      /(?:модел[а-яіїєґ]*\\s+середовищ|фенікс|альтернатив|просторов|містобуд)/iu.test(question);
+    const demoAlreadyExplainedInAnswer =
+      /демонстраційн[а-яіїєґ]*\\s+модел/iu.test(theoryTestAnswer);
+    const feniksDemoCall = [
+      "**Практичний напрям перевірки — [Демонстраційна модель середовища](https://andrew-hvc.github.io/author-resource/demo.html) (ДМС).**",
+      "Саме для цього проєкт передбачає залучення компетенцій,",
+      "вихідних даних, інженерних розрахунків і критичної експертизи,",
+      "щоб створити інтегровану цифрову модель, зіставляти",
+      "альтернативи та сформувати технічне завдання.",
+      "До підготовки ДМС можна долучитися через сайт.",
+      "ДМС ще належить розробити; результати перевірки не визначені наперед."
+    ].join(" ");
+    const withFeniksDemoCall = isFeniksRebuildingInquiry &&
+      !demoAlreadyExplainedInAnswer && !explicitlyDeclines
+      ? theoryTestAnswer + "\n\n" + feniksDemoCall
       : theoryTestAnswer;
+    const responseAnswer = inviteToDevelopDemo && !inviteToTestModel
+      ? withFeniksDemoCall +
+        (hasDemoStageExplained || isFeniksRebuildingInquiry ? "" : "\n\n" + demoStageBridge) +
+        (hasDemoParticipation || isFeniksRebuildingInquiry ? "" : "\n\n" + demoParticipation)
+      : withFeniksDemoCall;
     return json({
       focus_applied: focusObject?.id || null,
       answer: publicReferenceText(responseAnswer ||
