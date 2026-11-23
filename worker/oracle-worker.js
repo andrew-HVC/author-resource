@@ -3299,7 +3299,120 @@ export default {
           return;
       }
     };
-    if (parsed) {
+    // Shared navigation focus, grounded in the visitor's question rather than
+    // incidental words in the generated answer. The same focus governs the
+    // two next-question routes and the related episteme cards.
+    // High-specificity signals outrank broad "economy"/"social" classifiers;
+    // weak or ambiguous matches leave the existing navigation unchanged.
+    const navigationThemes = [
+      {
+        id: "ecology",
+        signals: [
+          [/(?:екологічн|природн)[а-яіїєґ\s]{0,24}(?:обмежен|умов|пріоритет|каркас|допустим)/iu, 7],
+          [/деградаці[яіїєґ]*\s+природн|виснаженн[яіїєґ]*\s+ресурс|ієрархі[яіїєґ]*\s+вплив/iu, 5],
+          [/екологічн|екокаркас/iu, 2]
+        ],
+        links: ["МС-022","МС-017","МС-081","МС-019"],
+        accept: /екологічн|природн|екокаркас|деградаці|антропогенн/iu,
+        conceptual: [
+          "Чому екологічні обмеження є вихідною умовою допустимості господарської діяльності?",
+          "Як екологічний каркас визначає межі організації антропогенного середовища?",
+          "Чому економічна результативність не може компенсувати порушення природних обмежень?"
+        ],
+        practical: [
+          "Які екологічні наслідки потрібно перевірити перед вибором способу виробництва?",
+          "Як зіставити втрати природних систем і вплив виробництва на умови життя людей?",
+          "Які дані допоможуть встановити, чи діяльність порушує екологічні обмеження?"
+        ]
+      },
+      {
+        id: "fractal",
+        signals: [
+          [/фрактальн[а-яіїєґ]*\s+економік/iu, 8],
+          [/структурн[а-яіїєґ]*\s+ускладнен|якісно\s+нов[а-яіїєґ]*\s+потреб/iu, 5],
+          [/попит.{0,45}пропозиц|пропозиц.{0,45}попит/iu, 4]
+        ],
+        links: ["МС-071","МС-085","МС-081","МС-084"],
+        accept: /фрактальн|ускладнен|спроможност|нов[а-яіїєґ]*\s+потреб|попит|пропозиц|взаємоді/iu,
+        conceptual: [
+          "Як у фрактальній економіці взаємно породжуються нові потреби та спроможності?",
+          "Чому структурне ускладнення взаємодій не зводиться до зростання обсягів виробництва?",
+          "Як антиентропійна діяльність може створювати якісно нові продуктивні спроможності?"
+        ],
+        practical: [
+          "Які ознаки свідчать про якісне, а не лише кількісне ускладнення економіки?",
+          "Як простежити появу нових запитів після створення нової спроможності?",
+          "Які наслідки нових економічних взаємодій варто перевіряти для людей і середовища?"
+        ]
+      },
+      {
+        id: "human-potential",
+        signals: [
+          [/людськ[а-яіїєґ]*\s+потенціал/iu, 7],
+          [/антропономік/iu, 4],
+          [/продуктивн[а-яіїєґ]*\s+житт|самореалізац|виснаженн|здоров['’]я/iu, 3]
+        ],
+        links: ["МС-043","МС-081","МС-040","МС-079"],
+        accept: /людськ[а-яіїєґ]*\s+потенціал|антропономік|продуктивн[а-яіїєґ]*\s+житт|самореалізац|здоров|виснаженн/iu,
+        conceptual: [
+          "Чим збереження людського потенціалу відрізняється від можливостей його реалізації?",
+          "Чому економічний результат не є достатнім критерієм продуктивного життя людини?",
+          "Як умови середовища впливають на збереження потенціалу різних людей?"
+        ],
+        practical: [
+          "Які чинники середовища можуть обмежувати реалізацію збереженого людського потенціалу?",
+          "Як перевіряти втрати людського потенціалу поряд з економічними результатами?",
+          "Які наслідки перевантаження та виснаження потрібно враховувати при оцінюванні діяльності?"
+        ]
+      },
+      {
+        id: "anti-entropy",
+        signals: [
+          [/коефіцієнт[а-яіїєґ]*\s+людськ[а-яіїєґ]*\s+впорядкованост|(?:^|[^\p{L}])КЛВ(?:\/H)?(?:$|[^\p{L}])/iu, 7],
+          [/антиентропійн[а-яіїєґ]*\s+(?:поведінк|діяльн|ефект|результат)/iu, 6],
+          [/впорядкованост|антиентропійн/iu, 3]
+        ],
+        links: ["МС-081","МС-079","МС-086","МС-071"],
+        accept: /антиентропійн|впорядкованост|КЛВ|внесок|зменшен[а-яіїєґ]*\s+втрат|стимулюван/iu,
+        conceptual: [
+          "Чим підтверджений антиентропійний ефект відрізняється від доброго наміру?",
+          "Як Коефіцієнт людської впорядкованості пов'язаний із результатами діяльності, а не цінністю людини?",
+          "Чому антиентропійний внесок може виникати поза продажем товарів і послуг?"
+        ],
+        practical: [
+          "Які наслідки діяльності варто перевіряти перед врахуванням антиентропійного внеску?",
+          "Як відрізняти підтверджене зменшення втрат від перенесення втрат на інших?",
+          "Які ризики виникають, якщо винагороду пов'язати лише з формальним показником?"
+        ]
+      }
+    ];
+    const navigationThemeScores = navigationThemes.map(theme => ({
+      theme,
+      score: theme.signals.reduce((sum, [rx, weight]) =>
+        sum + (rx.test(question) ? weight : 0), 0)
+    }));
+    const dominantNavigationTheme = phase === "model"
+      ? navigationThemeScores.sort((a,b) => b.score - a.score)[0]
+      : null;
+    const navigationFocus = dominantNavigationTheme?.score >= 6
+      ? dominantNavigationTheme.theme : null;
+    if (navigationFocus) {
+      // Source-grounded model suggestions are retained when they really
+      // address the visitor's focus. Otherwise use focused follow-ups,
+      // not broad fallback questions about cluster governance or accounting.
+      const offerFocusedRoute = (route, candidate, alternatives) => {
+        const relevant = [candidate, ...alternatives].filter(q =>
+          typeof q === "string" && navigationFocus.accept.test(q));
+        const focused = navigationFocus[route];
+        for (const q of [...relevant, ...focused]) {
+          if (typeof q === "string" && addQuestion(q, route)) return;
+        }
+      };
+      offerFocusedRoute("conceptual",
+        conceptualNext || parsed?.conceptual_question, activeRoutes[0]);
+      offerFocusedRoute("practical",
+        practicalNext || parsed?.practical_question, activeRoutes[1]);
+    } else if (parsed) {
       // Conceptual breadth first, practical consequences second.
       addRoute(conceptualNext || parsed.conceptual_question, activeRoutes[0], "conceptual");
       addRoute(practicalNext || parsed.practical_question, activeRoutes[1], "practical");
@@ -3646,7 +3759,27 @@ export default {
             .sort((a,b) => b[1] - a[1] ||
               a[0].localeCompare(b[0], "uk"))
             .slice(0, 4);
-    const relatedTopics = relatedTopicEntries
+    // Apply the same high-confidence question focus to related epistems.
+    // Preserve explicit DMS and other validated mechanism-specific routes.
+    const focusedRelatedEntries = navigationFocus &&
+      !dmsStageAcceptanceInquiry &&
+      !normativeInitiativeRejectionInquiry &&
+      !normativeRuleCreationInquiry &&
+      !interDomainConflictResolutionInquiry &&
+      !adaptiveProductionRecompositionInquiry &&
+      !multiDomainSharedEconomicObjectInquiry &&
+      !productiveCapacityInitiativeInquiry &&
+      !scarceCapacityPriorityInquiry &&
+      !cascadingProductionCommitmentInquiry &&
+      !personalDomainDelegationInquiry &&
+      !personalDomainControlInquiry &&
+      !earnedEconomicRightRedemptionInquiry &&
+      !crossChainEconomicChoiceInquiry &&
+      !personalWorkEconomicOutcomeInquiry
+      ? navigationFocus.links.map(id => [id, topicScores.get(id) || 0])
+      : null;
+    const finalRelatedTopicEntries = focusedRelatedEntries || relatedTopicEntries;
+    const relatedTopics = finalRelatedTopicEntries
       .map(([id]) => ({
         id,
         label: REFERENCE_TITLES[id],
