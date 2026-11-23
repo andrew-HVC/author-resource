@@ -3753,10 +3753,14 @@ export default {
       question + " " + testClaim)
       ? " Для такого дослідження можуть бути корисними компетенції з криптографії, інформаційної безпеки, розподілених реєстрів та економічного обліку."
       : " До дослідження можуть долучитися фахівці з відповідних технологій, моделювання та предметної експертизи.";
+    // The issue card below already contains the collaboration action.
+    // Keep the answer focused on the concrete research gap, not a
+    // second invitation to the same form.
+    const cleanTestClaim = String(testClaim || "").trim().replace(/[.!?\\s]+$/u, "");
     const theoryTestAnswer = inviteToTestModel
-      ? sourceIssueAnswer + "\n\nВиявлено питання для критичної перевірки в Демонстраційній моделі середовища: " +
-        testClaim + ". Це ще не доведена суперечність або спростування." +
-        testCompetencies + " За бажанням можна запропонувати дані, сценарій чи метод перевірки через форму співпраці."
+      ? sourceIssueAnswer + "\n\n**Питання для перевірки в ДМС:** " +
+        cleanTestClaim + ". Це відкрите проєктне питання, а не доведена суперечність." +
+        testCompetencies
       : sourceIssueAnswer;
     // The Demo invitation is explicitly part of the prose answer, not only
     // an optional card after the questions. The card links to a draft form.
