@@ -1527,6 +1527,13 @@ export default {
       "причинний механізм, зіставлення з наявними підходами,",
       "обмеження, ризики та умови критичної перевірки.",
       "Не ховай Модель за бар'єром із навігаційних переходів.",
+      "Коли говориш, що ефекти, придатність, надійність чи переваги",
+      "Моделі ще не перевірено і потрібні розрахунки, зазначай",
+      "конкретну наступну стадію — Демонстраційну модель середовища (ДМС).",
+      "Саме для дослідження цих залежностей, сценаріїв та обмежень",
+      "ДМС належить підготувати й розробити; результати не визначені наперед.",
+      "Не залишай застереження на абстрактному «потрібно перевірити».",
+      "Не стверджуй, що ДМС уже існує або перевірка вже проведена.",
       "Три методи: ПОРІВНЯННЯ, КРИТИКА та РОЗВИТОК причинних",
       "зв'язків до наступного системного рівня. Поєднуй їх",
       "залежно від питання, а не за механічним шаблоном.",
@@ -4098,9 +4105,24 @@ export default {
     // not an LLM phrase-matching guess. For acceptance/funding inquiries,
     // always render the canonical preproject scope. A visitor can still
     // explicitly request an expanded first contract including a prototype.
+    // A recurring generic disclaimer ("needs calculations / verification")
+    // must point to the actual next research stage of the Model. This is
+    // explanatory context, not a participation pitch. Only once per answer,
+    // and never on open/general conversations or contract-scope responses.
+    const needsVerificationBridge = introducedModel && phase === "model" &&
+      !explicitlyDeclines &&
+      /(?:потрібн[а-яіїєґ]*|належить|слід|мають|має|ще\s+треба)\s+.{0,85}(?:перевір|розрах|моделюван|порівнян)|не\s+(?:доведен|підтверджен)|не\s+є\s+доведен/iu.test(responseAnswer) &&
+      !/демонстраційн[а-яіїєґ]*\s+модел|(?:^|[^\p{L}])ДМС(?:$|[^\p{L}])/iu.test(responseAnswer);
+    const researchStageBridge =
+      "Саме для таких розрахунків, порівняння сценаріїв і перевірки " +
+      "взаємозалежностей передбачено наступну стадію — " +
+      "**Демонстраційну модель середовища (ДМС)**. Її ще належить " +
+      "розробити; результати дослідження не визначені наперед.";
     const finalAnswer = firstStageContractInquiry
       ? firstStageScopeCorrection
-      : responseAnswer;
+      : needsVerificationBridge
+        ? responseAnswer + "\n\n" + researchStageBridge
+        : responseAnswer;
     return json({
       focus_applied: focusObject?.id || null,
       answer: publicReferenceText(finalAnswer ||
