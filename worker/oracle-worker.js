@@ -3314,6 +3314,22 @@ export default {
         addQuestion(q, route);
     }
 
+    // The investment conversation has moved from "why fund it?" to
+    // planning DMS scope, delivery and acceptance. Keep BOTH routes within
+    // that stage rather than reverting to broad systems theory.
+    const planningDmsFunding = introducedModel &&
+      /демонстраційн[а-яіїєґ]*\s+модел|(?:^|[^\p{L}])ДМС(?:$|[^\p{L}])/iu.test(question) &&
+      /фінанс|інвест|перш[а-яіїєґ]*\s+етап|розробк/iu.test(question) &&
+      /організ|компетенц|обсяг|виконавц|оцінюват|результат|критері|етап|почати/iu.test(question);
+    if (planningDmsFunding) {
+      const planningNavigation = [
+        ["conceptual", "Як визначити мінімальний склад ДМС, достатній для перевірки взаємозалежностей без втрати цілісності Моделі?"],
+        ["practical", "Які результати першого етапу дадуть підстави ухвалити рішення про фінансування наступної стадії ДМС?"]
+      ];
+      suggestions.splice(0, suggestions.length);
+      for (const [route, q] of planningNavigation) addQuestion(q, route);
+    }
+
     // A precise source-backed term can be offered as an optional third question.
     const term = typeof parsed?.related_term === "string"
       ? parsed.related_term.trim().replace(/\s+/g, " ")
@@ -3709,8 +3725,11 @@ export default {
       "Це фінансування дослідження та розроблення, не придбання",
       "готового активу; дохідність чи повернення коштів не обіцяються."
     ].join(" ");
+    const alreadyDirectsToDms = /демонстраційн[а-яіїєґ]*\\s+модел/iu.test(withFeniksDemoCall) &&
+      /(?:сторінк|форму|посиланн|долучит|фінансуван|інвестиц)/iu.test(withFeniksDemoCall) &&
+      /andrew-hvc\\.github\\.io\\/author-resource\\//i.test(withFeniksDemoCall);
     const withInvestmentDemo = isModelInvestmentEnvironmentInquiry &&
-      !explicitlyDeclines &&
+      !planningDmsFunding && !explicitlyDeclines && !alreadyDirectsToDms &&
       !/https:\/\/andrew-hvc\.github\.io\/author-resource\/demo\.html/i.test(withFeniksDemoCall)
       ? withFeniksDemoCall + "\n\n" + investmentDemoBridge
       : withFeniksDemoCall;
