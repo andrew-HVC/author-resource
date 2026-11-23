@@ -3542,7 +3542,7 @@ export default {
     // domain or independently changing parties' commitments.
     const adaptiveProductionRecompositionInquiry =
       /(?:цифров[а-яіїєґ]*\s+керуюч[а-яіїєґ]*\s+копі|цифров[а-яіїєґ]*\s+систем)/iu.test(question) &&
-      /(?:альтернативн[а-яіїєґ]*\s+композиці|нов[а-яіїєґ]*\s+взаємоді|перебудов|виробнич[а-яіїєґ]*\s+маршрут)/iu.test(question) &&
+      /(?:[а-яіїєґ]*\s+композиці[а-яіїєґ]*\s+виробнич[а-яіїєґ]*\s+взаємоді|(?:нов[а-яіїєґ]*|альтернативн[а-яіїєґ]*)\s+композиці|нов[а-яіїєґ]*\s+взаємоді|перебудов|виробнич[а-яіїєґ]*\s+маршрут)/iu.test(question) &&
       /(?:керуюч[а-яіїєґ]*\s+норм|погоджен|операці|зобов['’]язан|домен)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
