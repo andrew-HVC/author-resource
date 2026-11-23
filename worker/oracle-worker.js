@@ -3544,12 +3544,22 @@ export default {
       /(?:цифров[а-яіїєґ]*\s+керуюч[а-яіїєґ]*\s+копі|цифров[а-яіїєґ]*\s+систем)/iu.test(question) &&
       /(?:[а-яіїєґ]*\s+композиці[а-яіїєґ]*\s+виробнич[а-яіїєґ]*\s+взаємоді|(?:нов[а-яіїєґ]*|альтернативн[а-яіїєґ]*)\s+композиці|нов[а-яіїєґ]*\s+взаємоді|перебудов|виробнич[а-яіїєґ]*\s+маршрут)/iu.test(question) &&
       /(?:керуюч[а-яіїєґ]*\s+норм|погоджен|операці|зобов['’]язан|домен)/iu.test(question);
+    // A conflict between individually lawful domain operations is a
+    // governance and economic-coordination issue. A third composition may
+    // resolve it, but a deadlock is not necessarily a capacity deficit.
+    const interDomainConflictResolutionInquiry =
+      /(?:конфлікт|несумісн|спір)/iu.test(question) &&
+      /(?:домен|економічн[а-яіїєґ]*\s+операці)/iu.test(question) &&
+      /(?:трет[а-яіїєґ]*\s+композиці|альтернатив|арбітр|примусов|не\s+перетворюючись|поступатис)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : adaptiveProductionRecompositionInquiry
-        ? ["МС-050", "МС-077", "МС-085", "МС-071"].map(id =>
+      : interDomainConflictResolutionInquiry
+        ? ["МС-077", "МС-085", "МС-050", "МС-071"].map(id =>
             [id, topicScores.get(id) || 0])
+        : adaptiveProductionRecompositionInquiry
+          ? ["МС-050", "МС-077", "МС-085", "МС-071"].map(id =>
+              [id, topicScores.get(id) || 0])
         : multiDomainSharedEconomicObjectInquiry
           ? ["МС-080", "МС-079", "МС-077", "МС-085"].map(id =>
               [id, topicScores.get(id) || 0])
