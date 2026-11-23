@@ -3297,6 +3297,23 @@ export default {
       addRoute(practicalNext || parsed.practical_question, activeRoutes[1], "practical");
     }
 
+    // The visitor's stated readiness to finance DMS research is the
+    // conversation's active goal. Navigation must advance that goal, not
+    // divert to investment instruments or abstract economic theory.
+    const seeksDmsResearchFunding = introducedModel &&
+      /інвест|фінанс|спонсор|донор|підтримк.{0,30}розроб/iu.test(question) &&
+      /модел|демонстраційн|розроб|концепц|проєкт|фінансуват|результат/iu.test(question) &&
+      /готов|що.{0,35}(?:фінансуват|отрима|результат)|хто.{0,35}(?:виконуват|розроблятим)|пропону|варт|як.{0,25}долучит/iu.test(question);
+    if (seeksDmsResearchFunding && !/не\s+(?:готов|хочу|планую)\s+.{0,25}(?:фінансуват|інвестуват)/iu.test(question)) {
+      const investorNavigation = [
+        ["conceptual", "Чому створення ДМС є окремим предметом фінансування до появи готових інвестиційних об’єктів?"],
+        ["practical", "Які етапи, результати, компетенції та критерії приймання потрібно визначити для фінансування розроблення ДМС?"]
+      ];
+      suggestions.splice(0, suggestions.length);
+      for (const [route, q] of investorNavigation)
+        addQuestion(q, route);
+    }
+
     // A precise source-backed term can be offered as an optional third question.
     const term = typeof parsed?.related_term === "string"
       ? parsed.related_term.trim().replace(/\s+/g, " ")
@@ -3435,6 +3452,13 @@ export default {
     fallback.forEach((id, i) => {
       if (!topicScores.size) addTopicScore(id, 4 - i);
     });
+    // For a prospective DMS research backer, start with the actual
+    // Demonstration Model / development sequence, not merely lexical
+    // matches about capital, deficits and future needs.
+    if (seeksDmsResearchFunding) {
+      const anchors = ["МС-001", "МС-053", "МС-038", "МС-054"];
+      anchors.forEach((id, i) => addTopicScore(id, 400 - i * 15));
+    }
     const relatedTopics = [...topicScores.entries()]
       .sort((a,b) => b[1] - a[1] ||
         a[0].localeCompare(b[0], "uk"))
