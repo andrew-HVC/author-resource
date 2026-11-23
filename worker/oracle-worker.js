@@ -3500,12 +3500,23 @@ export default {
     const personalDomainControlInquiry =
       /(?:персональн[а-яіїєґ]*\s+домен|особист[а-яіїєґ]*\s+домен|самокерован[а-яіїєґ]*\s+(?:цифров[а-яіїєґ]*\s+)?домен|(?:^|[^\p{L}])домен(?:у|ом|і|а)?(?:$|[^\p{L}]))/iu.test(question) &&
       /(?:контрол|оператор|постачальник|повноважен|доступ|автоном|самокеруван|приватн|ключ|дані|даних)/iu.test(question);
+    // Delegated economic execution is a different topic from control over
+    // infrastructure operators. Give smart contracts and capability matching
+    // precedence over privacy/interoperability when the visitor asks whether
+    // domain actions can run without per-operation confirmation.
+    const personalDomainDelegationInquiry =
+      /(?:домен|самокеруван)/iu.test(question) &&
+      /(?:делегуван|делегувала|повноважен|без\s+окремого\s+підтверджен|кожн[а-яіїєґ]*\s+операці|смартконтракт|зобов['’]язан)/iu.test(question) &&
+      /(?:запит|контракт|операці|спроможн|економічн)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : personalDomainControlInquiry
-        ? ["МС-067", "МС-079", "МС-087", "МС-088"].map(id =>
+      : personalDomainDelegationInquiry
+        ? ["МС-067", "МС-079", "МС-085", "МС-048"].map(id =>
             [id, topicScores.get(id) || 0])
+        : personalDomainControlInquiry
+          ? ["МС-067", "МС-079", "МС-087", "МС-088"].map(id =>
+              [id, topicScores.get(id) || 0])
         : [...topicScores.entries()]
             .sort((a,b) => b[1] - a[1] ||
               a[0].localeCompare(b[0], "uk"))
