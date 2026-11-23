@@ -3651,7 +3651,7 @@ export default {
       /(?:тотальн[а-яіїєґ]*\s+зруйнован|зруйнован[а-яіїєґ]*\s+(?:територ|міст)|відбудов|відновлен[а-яіїєґ]*\s+(?:міст|територ)|фенікс)/iu.test(question) &&
       /(?:модел[а-яіїєґ]*\s+середовищ|фенікс|альтернатив|просторов|містобуд)/iu.test(question);
     const demoAlreadyExplainedInAnswer =
-      /демонстраційн[а-яіїєґ]*\s+модел/iu.test(theoryTestAnswer);
+      /https:\/\/andrew-hvc\.github\.io\/author-resource\/demo\.html/i.test(theoryTestAnswer);
     const feniksDemoCall = [
       "**Практичний напрям перевірки — [Демонстраційна модель середовища](https://andrew-hvc.github.io/author-resource/demo.html) (ДМС).**",
       "Саме для цього проєкт передбачає залучення компетенцій,",
