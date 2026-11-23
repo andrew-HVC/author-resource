@@ -3537,12 +3537,22 @@ export default {
       /(?:декілька|кілька|декількох|кількох|декількома|кількома)\s+домен|спільн[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+об['’]єкт/iu.test(question) &&
       /(?:обладнан|енергетичн|технолог|взаємодоповнювальн|внеск|зобов['’]язан|управлін|розподіл)/iu.test(question) &&
       /(?:створенн|виникнут|виникн|формуван|права|зобов['’]язан|управлін|результат)/iu.test(question);
+    // Adaptive production recomposition: the governing copy proposes new
+    // interactions under existing norms, rather than acting as a personal
+    // domain or independently changing parties' commitments.
+    const adaptiveProductionRecompositionInquiry =
+      /(?:цифров[а-яіїєґ]*\s+керуюч[а-яіїєґ]*\s+копі|цифров[а-яіїєґ]*\s+систем)/iu.test(question) &&
+      /(?:альтернативн[а-яіїєґ]*\s+композиці|нов[а-яіїєґ]*\s+взаємоді|перебудов|виробнич[а-яіїєґ]*\s+маршрут)/iu.test(question) &&
+      /(?:керуюч[а-яіїєґ]*\s+норм|погоджен|операці|зобов['’]язан|домен)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : multiDomainSharedEconomicObjectInquiry
-        ? ["МС-080", "МС-079", "МС-077", "МС-085"].map(id =>
+      : adaptiveProductionRecompositionInquiry
+        ? ["МС-050", "МС-077", "МС-085", "МС-071"].map(id =>
             [id, topicScores.get(id) || 0])
+        : multiDomainSharedEconomicObjectInquiry
+          ? ["МС-080", "МС-079", "МС-077", "МС-085"].map(id =>
+              [id, topicScores.get(id) || 0])
         : productiveCapacityInitiativeInquiry
           ? ["МС-085", "МС-071", "МС-057", "МС-056"].map(id =>
               [id, topicScores.get(id) || 0])
