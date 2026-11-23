@@ -3479,9 +3479,11 @@ export default {
     // For a prospective DMS research backer, start with the actual
     // Demonstration Model / development sequence, not merely lexical
     // matches about capital, deficits and future needs.
-    const dmsStageAcceptanceInquiry = introducedModel &&
+    // Explicit DMS acronym must be sufficient even in a new chat where
+    // model_discovered state has not yet been restored.
+    const dmsStageAcceptanceInquiry =
       /(?:ДМС|демонстраційн[а-яіїєґ]*\s+модел)/iu.test(question) &&
-      /(?:перш[а-яіїєґ]*\s+етап|прийман|прийнят|замовник|технічн[а-яіїєґ]*\s+завдан|наступн[а-яіїєґ]*\s+етап)/iu.test(question) &&
+      /(?:перш[а-яіїєґ]*\s+етап|прийман|прийнят|замовник|замовнику|технічн[а-яіїєґ]*\s+завдан|наступн[а-яіїєґ]*\s+етап)/iu.test(question) &&
       /(?:результат|критері|фінанс|розроб|передат|етап)/iu.test(question);
     if (dmsStageAcceptanceInquiry) {
       ["МС-008", "МС-058", "МС-001", "МС-053"].forEach((id, i) =>
@@ -3492,10 +3494,14 @@ export default {
       // references to transport or infrastructure in an LLM answer.
       anchors.forEach((id, i) => addTopicScore(id, 1000 - i * 30));
     }
-    const relatedTopics = [...topicScores.entries()]
-      .sort((a,b) => b[1] - a[1] ||
-        a[0].localeCompare(b[0], "uk"))
-      .slice(0, 4)
+    const relatedTopicEntries = dmsStageAcceptanceInquiry
+      ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
+          [id, topicScores.get(id) || 0])
+      : [...topicScores.entries()]
+          .sort((a,b) => b[1] - a[1] ||
+            a[0].localeCompare(b[0], "uk"))
+          .slice(0, 4);
+    const relatedTopics = relatedTopicEntries
       .map(([id]) => ({
         id,
         label: REFERENCE_TITLES[id],
