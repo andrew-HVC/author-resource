@@ -214,7 +214,7 @@ const offeredIssueKeys = new Set(); // Do not repeat a reconciliation invitation
 function appendInline(target, line) {
   // Render only a narrow, safe Markdown subset: bold and external links.
   // Never use innerHTML; reject unsupported URL schemes.
-  const tokens = String(line).split(/(\\*\\*[^*]+\\*\\*|\\[[^\\]\\n]+\\]\\(https?:\\/\\/[^\\s)]+\\)|https?:\\/\\/[^\\s<>]+)/g);
+  const tokens = String(line).split(/(\*\*[^*]+\*\*|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>]+)/g);
   for (const token of tokens) {
     if (!token) continue;
     if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
@@ -223,8 +223,8 @@ function appendInline(target, line) {
       target.append(strong);
       continue;
     }
-    const markdownLink = /^\\[([^\\]\\n]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)$/.exec(token);
-    const rawLink = !markdownLink && /^https?:\\/\\/[^\\s<>]+$/.test(token);
+    const markdownLink = /^\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)$/.exec(token);
+    const rawLink = !markdownLink && /^https?:\/\/[^\s<>]+$/.test(token);
     if (markdownLink || rawLink) {
       const label = markdownLink ? markdownLink[1] : token;
       const address = markdownLink ? markdownLink[2] : token;
