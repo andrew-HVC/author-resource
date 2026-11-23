@@ -2667,8 +2667,30 @@ export default {
       "На пряме вузьке питання відповідай прямо; конверсія",
       "не повинна перетворюватися на обов'язкову довгу лекцію."
     ].join(" ");
+    // External technology example from the public Archeonomus updates feed.
+    // This is reference material, NOT part of the canonical Environment Model.
+    const asksPersonalDomainTechnology =
+      /(?:istota|істот[аиі]|самокерован[а-яіїєґ]*\\s+домен|персональн[а-яіїєґ]*\\s+домен|особист[а-яіїєґ]*\\s+ші|персональн[а-яіїєґ]*\\s+ші|автономн[а-яіїєґ]*\\s+(?:агент|домен)|міждоменн[а-яіїєґ]*)/iu.test(
+        [question, ...userTurns.slice(-2).map(x => x.content)].join(" ")
+      );
+    const istotaExampleInstructions = [
+      "ЗОВНІШНІЙ ПРИКЛАД ДЛЯ ТЕМИ ПЕРСОНАЛЬНОГО ДОМЕНУ:",
+      "ISTOTA — незалежний реальний програмний проєкт персональної",
+      "ШІ-системи: пам'ять, управління даними, агентні інструменти,",
+      "автоматизація завдань. Публічне джерело: https://istota.cynium.com/ .",
+      "У стрічці Archeonomus: https://andrew-hvc.github.io/author-resource/aktualizatsii.html?topic=domain .",
+      "ISTOTA є потенційним технічним прототипом, але НЕ реалізацією",
+      "канонічного персонального домену МС і НЕ доведено сумісною з ним.",
+      "Сервер ISTOTA на Archeonomus не запущено; партнерство не встановлене.",
+      "При релевантному запиті можеш наводити її як зовнішній приклад,",
+      "чітко відокремлюючи перевірені функції продукту від задуму МС.",
+      "Не видавай новинний запис за джерело канону, не приписуй",
+      "ISTOTA смартконтракти МС чи міждоменні економічні операції.",
+      "Не вставляй цей приклад у відповіді на сторонні теми."
+    ].join(" ");
     const instructions = (phase === "model" ? oracleWorldFrameInstructions + " " : "") +
       instructionsByDomain +
+      (asksPersonalDomainTechnology ? " " + istotaExampleInstructions : "") +
       (spatialModelDiscussion ? " " + spatialInfluencePrimacyInstructions : "") +
       (phase === "model" && asksSocioPoliticalClassification
         ? " " + socioPoliticalClassificationInstructions : "") +
