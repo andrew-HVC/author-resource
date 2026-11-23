@@ -3471,9 +3471,11 @@ export default {
     // For a prospective DMS research backer, start with the actual
     // Demonstration Model / development sequence, not merely lexical
     // matches about capital, deficits and future needs.
-    if (seeksDmsResearchFunding) {
+    if (seeksDmsResearchFunding || planningDmsFunding) {
       const anchors = ["МС-001", "МС-053", "МС-038", "МС-054"];
-      anchors.forEach((id, i) => addTopicScore(id, 400 - i * 15));
+      // Research-funding navigation should not be displaced by incidental
+      // references to transport or infrastructure in an LLM answer.
+      anchors.forEach((id, i) => addTopicScore(id, 1000 - i * 30));
     }
     const relatedTopics = [...topicScores.entries()]
       .sort((a,b) => b[1] - a[1] ||
@@ -3733,11 +3735,24 @@ export default {
       !/https:\/\/andrew-hvc\.github\.io\/author-resource\/demo\.html/i.test(withFeniksDemoCall)
       ? withFeniksDemoCall + "\n\n" + investmentDemoBridge
       : withFeniksDemoCall;
-    const responseAnswer = inviteToDevelopDemo && !inviteToTestModel
+    const baseResponseAnswer = inviteToDevelopDemo && !inviteToTestModel
       ? withInvestmentDemo +
         (hasDemoStageExplained || isFeniksRebuildingInquiry || isModelInvestmentEnvironmentInquiry ? "" : "\n\n" + demoStageBridge) +
         (hasDemoParticipation || isFeniksRebuildingInquiry || isModelInvestmentEnvironmentInquiry ? "" : "\n\n" + demoParticipation)
       : withInvestmentDemo;
+    // When a prospective funder is discussing DMS planning, retain one
+    // actionable route to contact. Never repeat an existing live form link.
+    const planningDmsContact = [
+      "Якщо ви розглядаєте підтримку першого етапу ДМС,",
+      "пропозицію щодо обсягу робіт, компетенцій або фінансування",
+      "можна передати через",
+      "[форму співпраці Archeonomus](https://andrew-hvc.github.io/author-resource/?focus=demo#cooperation).",
+      "Форма готує звернення для копіювання, а не надсилає його автоматично."
+    ].join(" ");
+    const responseAnswer = planningDmsFunding && !explicitlyDeclines &&
+      !/andrew-hvc\\.github\\.io\\/author-resource\\/\\?/i.test(baseResponseAnswer)
+      ? baseResponseAnswer + "\n\n" + planningDmsContact
+      : baseResponseAnswer;
     return json({
       focus_applied: focusObject?.id || null,
       answer: publicReferenceText(responseAnswer ||
