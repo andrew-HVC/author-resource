@@ -3531,12 +3531,21 @@ export default {
       /(?:ініціатив|проєкт|реалізаці|ресурс|відповідальн)/iu.test(question) &&
       /(?:хто|економічн|інвест|централізован)/iu.test(question) &&
       /(?:створенн|нов[а-яіїєґ]*\s+виробництв|усуненн|альтернатив)/iu.test(question);
+    // A shared economic object assembled from several domains is not the
+    // same as a request to fund DMS or create an investment environment.
+    const multiDomainSharedEconomicObjectInquiry =
+      /(?:декілька|кілька|декількох|кількох|декількома|кількома)\s+домен|спільн[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+об['’]єкт/iu.test(question) &&
+      /(?:обладнан|енергетичн|технолог|взаємодоповнювальн|внеск|зобов['’]язан|управлін|розподіл)/iu.test(question) &&
+      /(?:створенн|виникнут|виникн|формуван|права|зобов['’]язан|управлін|результат)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : productiveCapacityInitiativeInquiry
-        ? ["МС-085", "МС-071", "МС-057", "МС-056"].map(id =>
+      : multiDomainSharedEconomicObjectInquiry
+        ? ["МС-080", "МС-079", "МС-077", "МС-085"].map(id =>
             [id, topicScores.get(id) || 0])
+        : productiveCapacityInitiativeInquiry
+          ? ["МС-085", "МС-071", "МС-057", "МС-056"].map(id =>
+              [id, topicScores.get(id) || 0])
         : scarceCapacityPriorityInquiry
           ? ["МС-085", "МС-082", "МС-083", "МС-071"].map(id =>
               [id, topicScores.get(id) || 0])
@@ -3784,9 +3793,12 @@ export default {
     // Investment-environment inquiries need a concrete research-stage route.
     // Participation in DMS research is not a purchase of a security or a
     // promise of future investment returns.
+    // Mentioning an investor as an absent actor (e.g. "без єдиного інвестора")
+    // is not investment intent. Offer a DMS funding route only for inquiries
+    // directly about the investment environment / investment field.
     const isModelInvestmentEnvironmentInquiry = introducedModel &&
-      /інвестиц|інвестор|інвестуван|інвестиційн|капіталовкладенн|фінансуван/iu.test(question) &&
-      /середовищ|пол[еяюі]|модел|майбутн|можливост|спроможност/iu.test(question);
+      !multiDomainSharedEconomicObjectInquiry &&
+      /(?:інвестиційн[а-яіїєґ]*\s+(?:середовищ|пол[еяюі])|(?:середовищ|пол[еяюі])[^.!?]{0,65}інвестиційн|інвестуван[а-яіїєґ]*[^.!?]{0,75}середовищ)/iu.test(question);
     const investmentDemoBridge = [
       "**Практичний крок до створення такого інвестиційного середовища —",
       "[Демонстраційна модель середовища](https://andrew-hvc.github.io/author-resource/demo.html) (ДМС).**",
@@ -3808,7 +3820,8 @@ export default {
       !/https:\/\/andrew-hvc\.github\.io\/author-resource\/demo\.html/i.test(withFeniksDemoCall)
       ? withFeniksDemoCall + "\n\n" + investmentDemoBridge
       : withFeniksDemoCall;
-    const baseResponseAnswer = inviteToDevelopDemo && !inviteToTestModel
+    const baseResponseAnswer = inviteToDevelopDemo && !inviteToTestModel &&
+      !multiDomainSharedEconomicObjectInquiry
       ? withInvestmentDemo +
         (hasDemoStageExplained || isFeniksRebuildingInquiry || isModelInvestmentEnvironmentInquiry ? "" : "\n\n" + demoStageBridge) +
         (hasDemoParticipation || isFeniksRebuildingInquiry || isModelInvestmentEnvironmentInquiry ? "" : "\n\n" + demoParticipation)
