@@ -212,15 +212,35 @@ const offeredIssueKeys = new Set(); // Do not repeat a reconciliation invitation
 
 // Safe subset of Markdown. No innerHTML or third-party scripts.
 function appendInline(target, line) {
-  const parts = line.split(/(\*\*[^*]+\*\*)/g);
-  for (const part of parts) {
-    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+  // Render only a narrow, safe Markdown subset: bold and external links.
+  // Never use innerHTML; reject unsupported URL schemes.
+  const tokens = String(line).split(/(\\*\\*[^*]+\\*\\*|\\[[^\\]\\n]+\\]\\(https?:\\/\\/[^\\s)]+\\)|https?:\\/\\/[^\\s<>]+)/g);
+  for (const token of tokens) {
+    if (!token) continue;
+    if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
       const strong = document.createElement("strong");
-      strong.textContent = part.slice(2, -2);
+      appendInline(strong, token.slice(2, -2));
       target.append(strong);
-    } else {
-      target.append(document.createTextNode(part));
+      continue;
     }
+    const markdownLink = /^\\[([^\\]\\n]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)$/.exec(token);
+    const rawLink = !markdownLink && /^https?:\\/\\/[^\\s<>]+$/.test(token);
+    if (markdownLink || rawLink) {
+      const label = markdownLink ? markdownLink[1] : token;
+      const address = markdownLink ? markdownLink[2] : token;
+      try {
+        const parsed = new URL(address);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw Error("Invalid scheme");
+        const anchor = document.createElement("a");
+        anchor.href = parsed.href;
+        anchor.textContent = label;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        target.append(anchor);
+        continue;
+      } catch (_) { /* Fall back to literal text. */ }
+    }
+    target.append(document.createTextNode(token));
   }
 }
 
