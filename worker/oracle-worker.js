@@ -3308,10 +3308,16 @@ export default {
     // The visitor's stated readiness to finance DMS research is the
     // conversation's active goal. Navigation must advance that goal, not
     // divert to investment instruments or abstract economic theory.
+    // Ordinary residents' productive work and economic entitlements are
+    // internal-economy questions, even when they exclude external investors.
+    const personalWorkEconomicOutcomeInquiry =
+      /(?:я\s+(?:звичайн|працю|створю|надаю)|за\s+(?:свою\s+)?працю|заощаджен|накопичуват|родин|сім['’]ї|що\s+саме\s+я\s+отрим)/iu.test(question) &&
+      /(?:економічн|вартіст|продукт|послуг|прац|прав|результат|KWATT)/iu.test(question);
     const seeksDmsResearchFunding = introducedModel &&
+      !personalWorkEconomicOutcomeInquiry &&
+      /(?:демонстраційн[а-яіїєґ]*\s+модел|(?:^|[^\p{L}])ДМС(?:$|[^\p{L}]))/iu.test(question) &&
       /інвест|фінанс|спонсор|донор|підтримк.{0,30}розроб/iu.test(question) &&
-      /модел|демонстраційн|розроб|концепц|проєкт|фінансуват|результат/iu.test(question) &&
-      /готов|що.{0,35}(?:фінансуват|отрима|результат)|хто.{0,35}(?:виконуват|розроблятим)|пропону|варт|як.{0,25}долучит/iu.test(question);
+      /готов|що.{0,35}(?:фінансуват|отрима|результат)|хто.{0,35}(?:виконуват|розроблятим)|пропону|(?:вартіст[а-яіїєґ]*\s+(?:проєкт|розробк|ДМС))|як.{0,25}долучит/iu.test(question);
     if (seeksDmsResearchFunding && !/не\s+(?:готов|хочу|планую)\s+.{0,25}(?:фінансуват|інвестуват)/iu.test(question)) {
       const investorNavigation = [
         ["conceptual", "Чому створення ДМС є окремим предметом фінансування до появи готових інвестиційних об’єктів?"],
@@ -3336,6 +3342,14 @@ export default {
       ];
       suggestions.splice(0, suggestions.length);
       for (const [route, q] of planningNavigation) addQuestion(q, route);
+    }
+
+    // Keep both navigation chips on residents' productive rewards and
+    // realized economic rights; do not recycle investment/DMS prompts.
+    if (personalWorkEconomicOutcomeInquiry) {
+      suggestions.splice(0, suggestions.length);
+      addQuestion("Як відрізняються створений економічний результат, економічне право людини та його реалізація?", "conceptual");
+      addQuestion("Як людина може використати підтверджене економічне право для отримання продуктів і послуг?", "practical");
     }
 
     // A precise source-backed term can be offered as an optional third question.
@@ -3567,6 +3581,9 @@ export default {
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
+      : personalWorkEconomicOutcomeInquiry
+        ? ["МС-079", "МС-076", "МС-086", "МС-084"].map(id =>
+            [id, topicScores.get(id) || 0])
       : normativeInitiativeRejectionInquiry
         ? ["МС-077", "МС-078", "МС-079", "МС-075"].map(id =>
             [id, topicScores.get(id) || 0])
