@@ -3592,12 +3592,20 @@ export default {
       /(?:ланцюг|виробнич[а-яіїєґ]*\s+ланцюг)/iu.test(question) &&
       /(?:інш[а-яіїєґ]*\s+(?:потреб|ланцюг|послуг|продукц|виріб)|стоматолог|велосипед|свобод[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+вибор)/iu.test(question) &&
       /(?:економічн[а-яіїєґ]*\s+прав|прям[а-яіїєґ]*\s+економічн[а-яіїєґ]*\s+облік|внесок|реалізува)/iu.test(question);
+    // KLV/H and anti-entropic behavior are specific anthrop economics,
+    // not general privacy, digitization or organization topics.
+    const humanOrderlinessCoefficientInquiry =
+      /(?:коефіцієнт[а-яіїєґ]*\s+людськ[а-яіїєґ]*\s+впорядкованост|(?:^|[^\p{L}])КЛВ(?:\/H)?(?:$|[^\p{L}]))/iu.test(question) &&
+      /(?:антиентропійн|людськ[а-яіїєґ]*\s+потенціал|економічн|персональн[а-яіїєґ]*\s+домен|показник|вплив)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : crossChainEconomicChoiceInquiry
-        ? ["МС-079", "МС-076", "МС-084", "МС-085"].map(id =>
+      : humanOrderlinessCoefficientInquiry
+        ? ["МС-081", "МС-079", "МС-086", "МС-070"].map(id =>
             [id, topicScores.get(id) || 0])
+        : crossChainEconomicChoiceInquiry
+          ? ["МС-079", "МС-076", "МС-084", "МС-085"].map(id =>
+              [id, topicScores.get(id) || 0])
         : earnedEconomicRightRedemptionInquiry
           ? ["МС-076", "МС-086", "МС-079", "МС-084"].map(id =>
               [id, topicScores.get(id) || 0])
