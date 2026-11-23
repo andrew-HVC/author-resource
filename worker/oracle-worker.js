@@ -3551,12 +3551,21 @@ export default {
       /(?:конфлікт|несумісн|спір)/iu.test(question) &&
       /(?:домен|економічн[а-яіїєґ]*\s+операці)/iu.test(question) &&
       /(?:трет[а-яіїєґ]*\s+композиці|альтернатив|арбітр|примусов|не\s+перетворюючись|поступатис)/iu.test(question);
+    // Norm creation prompted by a gap in the current rules is distinct
+    // from applying delegated powers or settling a production deficit.
+    const normativeRuleCreationInquiry =
+      /(?:нов[а-яіїєґ]*\s+керуюч[а-яіїєґ]*\s+норм|формуванн[а-яіїєґ]*\s+нов[а-яіїєґ]*\s+норм|норм[а-яіїєґ]*\s+не\s+передбачають|затвердити\s+норм|зворотн[а-яіїєґ]*\s+ді[яіїєґ]*)/iu.test(question) &&
+      /(?:конфлікт|зобов['’]язан|домен|прав[ао]|врегулюван)/iu.test(question) &&
+      /(?:хто|ініціюват|запропонуват|погодит|затвердит|чинн|процедур)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : interDomainConflictResolutionInquiry
-        ? ["МС-077", "МС-085", "МС-050", "МС-071"].map(id =>
+      : normativeRuleCreationInquiry
+        ? ["МС-077", "МС-078", "МС-079", "МС-075"].map(id =>
             [id, topicScores.get(id) || 0])
+        : interDomainConflictResolutionInquiry
+          ? ["МС-077", "МС-085", "МС-050", "МС-071"].map(id =>
+              [id, topicScores.get(id) || 0])
         : adaptiveProductionRecompositionInquiry
           ? ["МС-050", "МС-077", "МС-085", "МС-071"].map(id =>
               [id, topicScores.get(id) || 0])
