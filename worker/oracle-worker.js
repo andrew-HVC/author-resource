@@ -3783,7 +3783,6 @@ export default {
       /перш[а-яіїєґ]*\s+етап/iu.test(question) &&
       /(?:замовник|прийман|прийнят|критері|фінансуван[а-яіїєґ]*\s+наступн)/iu.test(question) &&
       !/(?:перш[а-яіїєґ]*\s+етап.{0,80}(?:саме|вже)\s+(?:цифров[а-яіїєґ]*\s+)?прототип|включ(?:іть|ити)\s+прототип\s+до\s+перш)/iu.test(question);
-    const incorrectlyPromisesPrototype = /(?:перш[а-яіїєґ]*\s+етап|перш[а-яіїєґ]*\s+(?:пакет|результат|стаді)|передаван[а-яіїєґ]*\s+результат).{0,130}(?:цифров[а-яіїєґ]*\s+прототип|приймальн[а-яіїєґ]*\s+прототип|працююч[а-яіїєґ]*\s+модел)/iu.test(responseAnswer);
     const firstStageScopeCorrection = [
       "**Перший етап — передпроєктна підготовка та специфікація мінімальної цілісної ДМС, а не готовий цифровий прототип.**",
       "Замовнику передається погоджений пакет: межі та склад підсистем;",
@@ -3802,8 +3801,12 @@ export default {
       "розроблення та випробування цифрового прототипу.",
       "Це запропонована контрактна декомпозиція, а не затверджений",
       "кошторис чи вже погоджений склад робіт."
-    ].join(" ");
-    const finalAnswer = firstStageContractInquiry && incorrectlyPromisesPrototype
+    ].join(" ").replace(" **Приймання:**", "\\n\\n**Приймання:**");
+    // The scope of the first DMS contract is an explicit product decision,
+    // not an LLM phrase-matching guess. For acceptance/funding inquiries,
+    // always render the canonical preproject scope. A visitor can still
+    // explicitly request an expanded first contract including a prototype.
+    const finalAnswer = firstStageContractInquiry
       ? firstStageScopeCorrection
       : responseAnswer;
     return json({
