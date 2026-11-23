@@ -1561,6 +1561,14 @@ export default {
       "Поясни: лише після отримання зіставних проєктних результатів",
       "можна оцінити інвестиційні альтернативи, а реальні пілоти потрібні",
       "для подальшого підтвердження фактичних показників.",
+      "Для розмов про фінансування ДМС чітко розрізняй два можливі",
+      "контрактні результати: ЕТАП 1 — передпроєктна підготовка",
+      "(мінімальний склад, карта залежностей, дані, сценарії, ТЗ,",
+      "критерії приймання, попередній бюджет наступної стадії);",
+      "ЕТАП 2 — створення погодженого цифрового прототипу та його тестування.",
+      "Не включай робочий прототип у перший етап автоматично:",
+      "якщо пропонуєш об'єднати етапи, назви це окремим варіантом",
+      "із більшим обсягом, ризиком і бюджетом, який треба погодити.",
       "Не обіцяй інвестору чи учаснику прибутку, майбутнього контракту",
       "або права на реалізацію за сам факт участі (МС-001, МС-050, МС-053).",
       "Використовуй пошук у підключених матеріалах Моделі середовища.",
@@ -3471,7 +3479,14 @@ export default {
     // For a prospective DMS research backer, start with the actual
     // Demonstration Model / development sequence, not merely lexical
     // matches about capital, deficits and future needs.
-    if (seeksDmsResearchFunding || planningDmsFunding) {
+    const dmsStageAcceptanceInquiry = introducedModel &&
+      /(?:ДМС|демонстраційн[а-яіїєґ]*\s+модел)/iu.test(question) &&
+      /(?:перш[а-яіїєґ]*\s+етап|прийман|прийнят|замовник|технічн[а-яіїєґ]*\s+завдан|наступн[а-яіїєґ]*\s+етап)/iu.test(question) &&
+      /(?:результат|критері|фінанс|розроб|передат|етап)/iu.test(question);
+    if (dmsStageAcceptanceInquiry) {
+      ["МС-008", "МС-058", "МС-001", "МС-053"].forEach((id, i) =>
+        addTopicScore(id, 1600 - i * 40));
+    } else if (seeksDmsResearchFunding || planningDmsFunding) {
       const anchors = ["МС-001", "МС-053", "МС-038", "МС-054"];
       // Research-funding navigation should not be displaced by incidental
       // references to transport or infrastructure in an LLM answer.
