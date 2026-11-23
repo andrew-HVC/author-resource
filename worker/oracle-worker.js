@@ -3515,12 +3515,22 @@ export default {
       /(?:виробнич[а-яіїєґ]*\s+ланцюг|постачальник|постачальників|каскад|перенаправлен[а-яіїєґ]*\s+ресурс)/iu.test(question) &&
       /(?:відклик|скасув|зобов['’]язан|перебуд|перепланув|резервув)/iu.test(question) &&
       /(?:запит|домен|виробник|ресурс|операці)/iu.test(question);
+    // Competing domain requests for scarce production capacity concern
+    // scarcity, carrying commitments and coordination across domains,
+    // not the implementation of digital copies.
+    const scarceCapacityPriorityInquiry =
+      /(?:дефіцитн|дефіцит|обмежен[а-яіїєґ]*\s+(?:ресурс|спроможн)|конкуруюч[а-яіїєґ]*\s+запит)/iu.test(question) &&
+      /(?:пріоритет|розподіл|розподільник|вистачає\s+лише|на\s+один|одночасно|оскарж)/iu.test(question) &&
+      /(?:домен|запит|виробнич|ресурс|спроможн)/iu.test(question);
     const relatedTopicEntries = dmsStageAcceptanceInquiry
       ? ["МС-008", "МС-058", "МС-001", "МС-053"].map(id =>
           [id, topicScores.get(id) || 0])
-      : cascadingProductionCommitmentInquiry
-        ? ["МС-050", "МС-086", "МС-085", "МС-071"].map(id =>
+      : scarceCapacityPriorityInquiry
+        ? ["МС-085", "МС-082", "МС-083", "МС-071"].map(id =>
             [id, topicScores.get(id) || 0])
+        : cascadingProductionCommitmentInquiry
+          ? ["МС-050", "МС-086", "МС-085", "МС-071"].map(id =>
+              [id, topicScores.get(id) || 0])
         : personalDomainDelegationInquiry
           ? ["МС-067", "МС-079", "МС-085", "МС-048"].map(id =>
               [id, topicScores.get(id) || 0])
