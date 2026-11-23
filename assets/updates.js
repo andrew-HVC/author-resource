@@ -2,8 +2,8 @@
    assets/updates.json appear in the sidebar and complete archive. */
 (()=>{
 "use strict";
-const TOPICS=["model","feniks","demo"];
-const labels={model:"Модель середовища",feniks:"Фенікс",demo:"Демонстраційна модель"};
+const TOPICS=["model","feniks","demo","domain"];
+const labels={model:"Модель середовища",feniks:"Фенікс",demo:"Демонстраційна модель",domain:"Персональний домен"};
 const node=(tag,cls,content)=>{
   const x=document.createElement(tag);
   if(cls)x.className=cls;
