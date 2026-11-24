@@ -3669,6 +3669,7 @@ export default {
     }
     // Conceptual anchors compensate for Ukrainian inflections and for
     // closely linked articles whose titles lack identical vocabulary.
+    /** @type {Array<[RegExp, string[]]>} */
     const epistemeAnchors = [
       [/екологічн|екокаркас|природн.{0,25}(?:меж|умов)|екосистем/iu,
         ["МС-022","МС-019","МС-017","МС-020"]],
