@@ -1526,6 +1526,11 @@ export default {
       /антропоном[а-яіїєґ]*|людськ[а-яіїєґ]*\s+потенціал[а-яіїєґ]*/iu.test(question) &&
       (namesModel || modelDiscovered || namesCanonicalConcept ||
        /антропоном[а-яіїєґ]*/iu.test(question));
+    // A request about an anti-entropic contribution AND economic value is
+    // more specific than a general human-potential question.
+    const asksAntiEntropyEconomicLink =
+      /антиентроп|впорядкованост|зменш[а-яіїєґ]*\s+втрат|скорочен[а-яіїєґ]*\s+втрат/iu.test(question) &&
+      /економічн|вартіст|вартост|товар|послуг|продаж|винагород|стимул|KWATT/iu.test(question);
 
     const modelInstructions = [
       "Ти — Оракул простору альтернативних ідей.",
@@ -2638,6 +2643,24 @@ export default {
       "За відсутності математичної реалізації чи виміряних даних",
       "не вигадуй готових формул або доведених показників."
     ].join(" ");
+    const antiEntropyEconomicLinkInstructions = [
+      "Коли запит прямо пов'язує антиентропійну діяльність",
+      "із економічною вартістю, не зупиняйся на розмежуванні",
+      "людського потенціалу й економічного результату.",
+      "За МС-081 та АТ-021 поясни роль КЛВ/H: фактична дія →",
+      "верифіковані індикатори результату → зміна КЛВ/H →",
+      "позитивний зворотний зв'язок для персонального домену.",
+      "Зворотний зв'язок може бути інформаційним, розвитковим,",
+      "операційним чи економічним; конкретні економічні правила",
+      "ще належить визначити, тому КЛВ/H не дорівнює грошам",
+      "і не перераховується автоматично в KWATT.",
+      "Окремо за МС-046 покажи походження вартості від потреби",
+      "людини та її реалізацію через задоволення потреби.",
+      "Продаж товару не є обов'язковою умовою результату,",
+      "але сам антиентропійний ефект без встановленої потреби",
+      "не доводить виникнення чи реалізації економічної вартості.",
+      "Поясни взаємодію цих механізмів, не зливаючи їх в один."
+    ].join(" ");
     const economicFoundationInstructions = [
       "На запитання про теоретичні економічні засади Моделі",
       "почни з АНТРОПОНОМІКИ як фундаментальної авторської рамки.",
@@ -2785,6 +2808,7 @@ export default {
       (canonicalConceptInstructions ? " " + canonicalConceptInstructions : "") +
       (asksEconomicFoundations ? " " + economicFoundationInstructions : "") +
       (asksAnthropoStructure ? " " + anthroStructureInstructions : "") +
+      (asksAntiEntropyEconomicLink ? " " + antiEntropyEconomicLinkInstructions : "") +
       (asksSpatialInfluenceHierarchy ? " " + spatialInfluenceHierarchyInstructions : "");
 
     const theoreticalSourceHint = asksEconomicFoundations
@@ -2800,6 +2824,12 @@ export default {
         "МС-007 «Людський потенціал як первинний критерій якості середовища»; " +
         "АТ-022 «Антропономіка»; для походження вартості МС-046.]"
       : "";
+    const antiEntropySourceHint = asksAntiEntropyEconomicLink
+      ? "\n\n[Пошукові орієнтири: МС-081 «КЛВ як механізм стимулювання " +
+        "антиентропійної поведінки»; АТ-021 «Коефіцієнт людської " +
+        "впорядкованості (КЛВ/H)»; МС-046 «Фізична основа вартості " +
+        "в Моделі середовища». Відрізни стимул КЛВ від реалізації вартості.]"
+      : "";
     const focusObject=await resolveOracleFocus(body?.focus_context);
     const focusText=focusObject ? "\n\n[КОНТЕКСТ ОБРАНОГО ІНФОРМАЦІЙНОГО ОБ'ЄКТА. " +
       "Тип: " + (focusObject.type==="graphic"?"паспорт графічного матеріалу":"текстовий розділ") +
@@ -2814,7 +2844,8 @@ export default {
         canonicalConceptTitle + "»; документи: " +
         canonicalConceptRefs.map(([id,title]) => id + " «" + title + "»").join("; ") +
         ". Ця примітка лише уточнює зміст і не змінює запитання користувача.]"
-      : question) + theoreticalSourceHint + anthroSourceHint + focusText;
+      : question) + theoreticalSourceHint + anthroSourceHint +
+        antiEntropySourceHint + focusText;
     let response;
     try {
       response = await fetch("https://api.openai.com/v1/responses", {
@@ -2836,10 +2867,12 @@ export default {
             vector_store_ids: [env.ORACLE_VECTOR_STORE_ID],
             max_num_results: needsEconomicObjectComparison ||
               asksSocioPoliticalClassification || asksCoercionRisk ||
-              asksEconomicFoundations || asksAnthropoStructure ? 12 : 8
+              asksEconomicFoundations || asksAnthropoStructure ||
+              asksAntiEntropyEconomicLink ? 12 : 8
           }],
           tool_choice: !strategicExploration || needsCanonicalSearch ||
-            asksEconomicFoundations || asksAnthropoStructure
+            asksEconomicFoundations || asksAnthropoStructure ||
+            asksAntiEntropyEconomicLink
               ? "required" : "auto",
           reasoning: { effort: "medium" },
           text: {
@@ -3041,11 +3074,49 @@ export default {
       question
     ].map(x => x.toLocaleLowerCase("uk").replace(/\s+/g, " ").trim()));
     const suggestions = [];
+    // Avoid close paraphrases of prior navigation, not merely identical text.
+    // Conservative overlap thresholds preserve legitimate deeper follow-ups.
+    const navigationStems = value => [...new Set(
+      (String(value || "").toLocaleLowerCase("uk")
+        .match(/[а-яіїєґa-z]{5,}/gu) || [])
+        .map(word => word.slice(0, 6))
+        .filter(stem => !/^(?:якими|якісн|якогос|наскіл|можлив|потріб|певним|після|через|такого|цього|відпов|дослід)$/.test(stem))
+    )];
+    const priorNavigationTexts = [
+      ...userTurns.map(turn => turn.content),
+      ...history.filter(turn => turn.role === "assistant")
+        .flatMap(turn => turn.offered_questions)
+    ];
+    const isNearNavigationRepeat = candidate => {
+      const tokens = navigationStems(candidate);
+      if (tokens.length < 4) return false;
+      return priorNavigationTexts.some(previous => {
+        const earlier = navigationStems(previous);
+        if (earlier.length < 4) return false;
+        const shared = tokens.filter(token => earlier.includes(token)).length;
+        return shared >= 4 &&
+          shared / Math.min(tokens.length, earlier.length) >= 0.8 &&
+          shared / Math.max(tokens.length, earlier.length) >= 0.6;
+      });
+    };
+    // A contrast already explicitly explained in the answer is not a new
+    // conceptual discovery; this applies to any subject, not just anthropo.
+    const isAnsweredContrast = candidate => {
+      if (!/(?:не\s+тотожн|відрізня|відмінн|різниц)/iu.test(candidate) ||
+          !/(?:не\s+є|не\s+тотожн|відрізня|розмеж|не\s+означає)/iu.test(answer))
+        return false;
+      const tokens = navigationStems(candidate);
+      const explained = new Set(navigationStems(answer));
+      const shared = tokens.filter(token => explained.has(token)).length;
+      return tokens.length >= 5 && shared >= 4 &&
+        shared / tokens.length >= 0.7;
+    };
     const addQuestion = (value, route = "practical") => {
       if (typeof value !== "string") return false;
       const q = value.trim().replace(/\s+/g, " ");
       const key = q.toLocaleLowerCase("uk");
-      if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key)) return false;
+      if (!q || q.length > 150 || !q.endsWith("?") || seen.has(key) ||
+          isNearNavigationRepeat(q) || isAnsweredContrast(q)) return false;
       seen.add(key);
       suggestions.push({ kind: "question", route, label: q, query: q });
       return true;
@@ -3183,8 +3254,9 @@ export default {
     // A conceptual route must gain altitude. An initial building-level
     // discussion becomes a system-level question; the next opt-in choice
     // explicitly opens structural alternatives without naming the Model yet.
-    const conceptualNext = asksAnthropoStructure
-      ? "Чому антропономічне оцінювання людського потенціалу не тотожне формуванню економічної вартості?"
+    const conceptualNext = phase === "model" &&
+      (asksAnthropoStructure || asksEconomicFoundations)
+      ? null // Let the response and current inquiry determine what comes next.
       : asksEconomicFoundations
       ? "Як антропономіка пов’язує людський потенціал із походженням економічної вартості?"
       : phase === "open" && topic === "economy"
@@ -3212,8 +3284,9 @@ export default {
       : phase === "model" && topic === "transport"
       ? "Як лінійний інфраструктурний каркас МС змінює організацію транспортних потоків і території?"
       : null;
-    const practicalNext = asksAnthropoStructure
-      ? "Як вимірювані фактори економічних рішень можуть змінювати втрати людського потенціалу?"
+    const practicalNext = phase === "model" &&
+      (asksAnthropoStructure || asksEconomicFoundations)
+      ? null // No mandatory generic measurement question after every reply.
       : asksEconomicFoundations
       ? "Як перевірити вплив економічних рішень Моделі на збереження та реалізацію людського потенціалу?"
       : phase === "open" && topic === "economy"
@@ -3553,8 +3626,10 @@ export default {
     const dominantNavigationTheme = phase === "model"
       ? navigationThemeScores.sort((a,b) => b.score - a.score)[0]
       : null;
-    const navigationFocus = dominantNavigationTheme?.score >= 6
-      ? dominantNavigationTheme.theme : null;
+    const navigationFocus = phase === "model" && asksAntiEntropyEconomicLink
+      ? navigationThemes.find(theme => theme.id === "anti-entropy")
+      : dominantNavigationTheme?.score >= 6
+        ? dominantNavigationTheme.theme : null;
     if (navigationFocus) {
       // Source-grounded model suggestions are retained when they really
       // address the visitor's focus. Otherwise use focused follow-ups,
