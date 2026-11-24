@@ -1156,6 +1156,15 @@ function publicReferenceName(id) {
   if (!title) return null;
   return "«" + title + "» (" + (id.startsWith("АТ-") ? "Атлас термінів" : "епістема") + ")";
 }
+// Public-facing prose uses the full canonical term; internal source IDs and
+// the Atlas/episteme registries retain their original canonical labels.
+function publicHumanOrderTerm(value) {
+  return String(value || "")
+    .replace(/Коефіцієнт людської впорядкованості\s*\(\s*КЛВ\s*\/\s*H\s*\)/giu,
+      "Коефіцієнт людської впорядкованості")
+    .replace(/(?<![\p{L}\p{N}])КЛВ\s*\/\s*H(?![\p{L}\p{N}])/giu,
+      "Коефіцієнт людської впорядкованості");
+}
 function publicReferenceText(value) {
   return String(value || "").replace(/(?:АТ|МС)[-–—]\s*\d{3}/gu,
     (token, offset, fullText) => {
@@ -1645,6 +1654,11 @@ export default {
       "порівняння та критичної перевірки, а не як вихідну структуру Моделі.",
       "Не ототожнюй авторські положення з доведеними фактами.",
       "Не спотворюй термінологію першоджерел.",
+      "У публічних поясненнях і наступних питаннях замість",
+      "скорочення «КЛВ/H» використовуй повну назву",
+      "«Коефіцієнт людської впорядкованості».",
+      "Назви канонічних джерел і внутрішні пошукові позначення",
+      "залишаються без змін.",
       "Для відвідувача в тексті відповіді показуй НАЗВИ",
       "епістем і термінів, не індекси АТ-xxx або МС-xxx.",
       "Навіть якщо людина питає за номером, ідентифікуй джерело",
@@ -4363,12 +4377,16 @@ export default {
         : decisiveDemoStageAnswer;
     return json({
       focus_applied: focusObject?.id || null,
-      answer: publicReferenceText(finalAnswer ||
-        "Не вдалося завершити відповідь. Спробуйте повторити запит коротше."),
+      answer: publicHumanOrderTerm(publicReferenceText(finalAnswer ||
+        "Не вдалося завершити відповідь. Спробуйте повторити запит коротше.")),
       sources: introducedModel ? sources : [],
       conversation_domain: domain,
       model_discovered: introducedModel || (modelDiscovered && !explicitNewTopic),
-      suggestions,
+      suggestions: suggestions.map(item => ({
+        ...item,
+        label: publicHumanOrderTerm(item.label),
+        query: publicHumanOrderTerm(item.query)
+      })),
       related_topics: relatedTopics,
       engagement_offer: showEngagement,
       engagement_mode: engagementMode,
