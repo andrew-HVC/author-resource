@@ -128,7 +128,7 @@
       <button type="button" id="access-delete" class="access-subtle">Видалити обліковий запис і дані</button>
     </div>
   </div>
-  <p class="access-membership-note">Реєстрація на сайті Archeonomus <strong>не означає членства</strong> в <a href="dms.html" target="_blank" rel="noopener">ГО «ДМС»</a>. Співпраця з ДМС є окремою добровільною ініціативою.</p>
+  <p class="access-membership-note">Реєстрація на сайті Archeonomus <strong>не означає членства</strong> у <a href="dms.html" target="_blank" rel="noopener">громадській організації «Демонстраційна Модель Середовища»</a>. Зацікавлені у співпраці з цією організацією можуть звернутися окремо.</p>
   <div id="access-turnstile" aria-label="Захист пробного входу від автоматичних запитів"></div>
   <p id="access-config-note" class="access-explanation"></p>
   <p id="access-remaining" class="access-remaining"></p>
@@ -546,7 +546,7 @@ function addMessage(role, content, sources = [], truncated = false, suggestions 
           : "Підготувати пропозицію співпраці або критичного розгляду";
     const explanation = document.createElement("p");
     explanation.textContent = isTheoryTest
-      ? "Виявлено перевірюване питання або прогалину, не доведене спростування. Можна запропонувати дані, сценарії або метод перевірки під час розроблення ДМС. Форма готує звернення для копіювання й не надсилає його."
+      ? "Виявлено перевірюване питання або прогалину, не доведене спростування. Можна запропонувати дані, сценарії або метод перевірки під час розроблення Демонстраційної моделі середовища. Форма готує звернення для копіювання й не надсилає його."
       : isSourceIssue
       ? "Потрібна незалежна звірка " +
         (displayIssueRefs.length ? displayIssueRefs.join(" та ") : "авторських документів") +
