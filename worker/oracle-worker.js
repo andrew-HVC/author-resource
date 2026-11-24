@@ -1516,6 +1516,9 @@ export default {
     const relevantModelSubject =
       (systemTopic && domain !== "general") ||
       personalDigitalAutonomyInquiry || humanPossibilitiesInquiry;
+    // Keep a broad editor type for compatibility with the retained phase branches.
+    // At runtime the selector still yields only "model" or "open".
+    /** @type {string} */
     const phase = (namesModel || selectedModelFollowup || relevantModelSubject)
       ? "model" : "open";
     const strategicExploration = phase === "open" || phase === "systems";
@@ -3521,7 +3524,8 @@ export default {
     const navigationThemeScores = navigationThemes.map(theme => ({
       theme,
       score: theme.signals.reduce((sum, [rx, weight]) =>
-        sum + (rx.test(question) ? weight : 0), 0)
+        sum + (rx instanceof RegExp && typeof weight === "number" && rx.test(question)
+          ? weight : 0), 0)
     }));
     const dominantNavigationTheme = phase === "model"
       ? navigationThemeScores.sort((a,b) => b.score - a.score)[0]
