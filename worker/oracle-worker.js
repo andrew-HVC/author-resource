@@ -2902,6 +2902,8 @@ export default {
         ". Ця примітка лише уточнює зміст і не змінює запитання користувача.]"
       : question) + theoreticalSourceHint + anthroSourceHint +
         antiEntropySourceHint + focusText;
+    // Keep the initial request for a single bounded recovery attempt.
+    let oracleRequestPayload = null;
     let response;
     try {
       response = await fetch("https://api.openai.com/v1/responses", {
@@ -2910,7 +2912,7 @@ export default {
           "Authorization": "Bearer " + env.OPENAI_API_KEY,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
+        body: JSON.stringify(oracleRequestPayload = {
           model: "gpt-6-luna",
           instructions,
           input: [...history.map(x => ({ role: x.role, content: x.content })),
@@ -2981,7 +2983,9 @@ export default {
               }
             }
           },
-          max_output_tokens: 4000,
+          // Long research drafts require room for reasoning AND written text.
+          max_output_tokens: /(?:сформуй|підготуй|напиши|розроби|створи).{0,230}(?:тез|доповід|науков|паспорт|документ|текст)|(?:науков[а-яіїєґ]*\s+тез|науково-технічн[а-яіїєґ]*\s+текст)/iu.test(question)
+            ? 7000 : 4000,
           store: false
         })
       });
@@ -3001,6 +3005,72 @@ export default {
       apiUsage = data.usage || null;
     } catch {
       return json({ error: "Invalid upstream response" }, 502);
+    }
+
+    // Reaching the token budget can leave a partial JSON string and no
+    // readable answer. Try once more rather than silently returning blank text.
+    const usableOracleResult = result => {
+      if (!result || result.status === "incomplete" ||
+          result.incomplete_details?.reason === "max_output_tokens") return false;
+      const value = (result.output || [])
+        .flatMap(item => item.content || [])
+        .filter(item => item.type === "output_text")
+        .map(item => item.text || "").join("\n").trim();
+      if (!value) return false;
+      if (!value.startsWith("{")) return true; // legacy plain-text fallback
+      try {
+        const structured = JSON.parse(value);
+        return typeof structured?.answer === "string" &&
+          structured.answer.trim().length > 0;
+      } catch {
+        return false;
+      }
+    };
+    if (!usableOracleResult(data)) {
+      const firstUsage = data.usage || {};
+      console.warn("Oracle generation requires recovery", {
+        status: data.status || "unknown",
+        reason: data.incomplete_details?.reason || "empty_or_invalid_output"
+      });
+      try {
+        const secondResponse = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + env.OPENAI_API_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            ...oracleRequestPayload,
+            reasoning: { effort: "low" },
+            max_output_tokens: 8500
+          })
+        });
+        if (!secondResponse.ok)
+          return json({ error: "Повторна генерація відповіді не вдалася." }, 502);
+        const retryData = await secondResponse.json();
+        if (!usableOracleResult(retryData)) {
+          console.warn("Oracle retry yielded incomplete structured output", {
+            status: retryData.status || "unknown",
+            reason: retryData.incomplete_details?.reason || "empty_or_invalid_output"
+          });
+          return json({
+            error: "Оракул не зміг завершити генерацію відповіді. Повторіть запит."
+          }, 502);
+        }
+        data = retryData;
+        // Include both API calls in the usage audit and estimated costs.
+        apiUsage = {
+          ...(retryData.usage || {}),
+          input_tokens: Number(firstUsage.input_tokens || 0) +
+            Number(retryData.usage?.input_tokens || 0),
+          output_tokens: Number(firstUsage.output_tokens || 0) +
+            Number(retryData.usage?.output_tokens || 0)
+        };
+      } catch {
+        return json({
+          error: "Оракул не зміг відновити генерацію відповіді. Повторіть запит."
+        }, 502);
+      }
     }
 
     const parts = (data.output || [])
