@@ -1529,7 +1529,7 @@ export default {
     // A request about an anti-entropic contribution AND economic value is
     // more specific than a general human-potential question.
     const asksAntiEntropyEconomicLink =
-      /антиентроп|впорядкованост|зменш[а-яіїєґ]*\s+втрат|скорочен[а-яіїєґ]*\s+втрат/iu.test(question) &&
+      /антиентроп|впорядкован[іо]ст|зменш[а-яіїєґ]*\s+втрат|скорочен[а-яіїєґ]*\s+втрат/iu.test(question) &&
       /економічн|вартіст|вартост|товар|послуг|продаж|винагород|стимул|KWATT/iu.test(question);
 
     const modelInstructions = [
@@ -3105,11 +3105,13 @@ export default {
       if (!/(?:не\s+тотожн|відрізня|відмінн|різниц)/iu.test(candidate) ||
           !/(?:не\s+є|не\s+тотожн|відрізня|розмеж|не\s+означає)/iu.test(answer))
         return false;
-      const tokens = navigationStems(candidate);
-      const explained = new Set(navigationStems(answer));
-      const shared = tokens.filter(token => explained.has(token)).length;
-      return tokens.length >= 5 && shared >= 4 &&
-        shared / tokens.length >= 0.7;
+      // Compare short roots here to tolerate Ukrainian inflection
+      // (e.g. "вартість" vs "вартості") without fuzzy global filtering.
+      const roots = [...new Set(navigationStems(candidate).map(stem => stem.slice(0, 4)))];
+      const explained = new Set(navigationStems(answer).map(stem => stem.slice(0, 4)));
+      const shared = roots.filter(root => explained.has(root)).length;
+      return roots.length >= 5 && shared >= 5 &&
+        shared / roots.length >= 0.6;
     };
     const addQuestion = (value, route = "practical") => {
       if (typeof value !== "string") return false;
@@ -3601,10 +3603,10 @@ export default {
         signals: [
           [/коефіцієнт[а-яіїєґ]*\s+людськ[а-яіїєґ]*\s+впорядкованост|(?:^|[^\p{L}])КЛВ(?:\/H)?(?:$|[^\p{L}])/iu, 7],
           [/антиентропійн[а-яіїєґ]*\s+(?:поведінк|діяльн|ефект|результат)/iu, 6],
-          [/впорядкованост|антиентропійн/iu, 3]
+          [/впорядкован[іо]ст|антиентропійн/iu, 3]
         ],
         links: ["МС-081","МС-079","МС-086","МС-071"],
-        accept: /антиентропійн|впорядкованост|КЛВ|внесок|зменшен[а-яіїєґ]*\s+втрат|стимулюван/iu,
+        accept: /антиентропійн|впорядкован[іо]ст|КЛВ|внесок|зменшен[а-яіїєґ]*\s+втрат|стимулюван/iu,
         conceptual: [
           "Чим підтверджений антиентропійний ефект відрізняється від доброго наміру?",
           "Як Коефіцієнт людської впорядкованості пов'язаний із результатами діяльності, а не цінністю людини?",
