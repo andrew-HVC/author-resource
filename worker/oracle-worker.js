@@ -1182,8 +1182,23 @@ function publicDemoModelTerm(value) {
     .replace(/(?<![\p{L}\p{N}])ДМС(?![\p{L}\p{N}])/giu,
       "Демонстраційна модель середовища");
 }
+// Expand the standalone project abbreviation in public prose. Numbered
+// references (МС-001 etc.) are handled separately by publicReferenceText.
+function publicEnvironmentModelTerm(value) {
+  return String(value || "")
+    .replace(/Модель середовища\s*\(\s*МС\s*\)/giu,
+      "Модель середовища")
+    .replace(/(?<![\p{L}\p{N}])(в|у)\s+МС(?![\p{L}\p{N}]|[-–—]\s*\d)/giu,
+      "у Моделі середовища")
+    .replace(/(?<![\p{L}\p{N}])(до|для|без|після|щодо|від|із|зі|з|розроблення|проєктування|структура|архітектура|методологія|принципи|принципів|складові|рішення|оцінка|перевірка|створення|розвиток)\s+МС(?![\p{L}\p{N}]|[-–—]\s*\d)/giu,
+      "$1 Моделі середовища")
+    .replace(/(?<![\p{L}\p{N}])МС(?![\p{L}\p{N}]|[-–—]\s*\d)/giu,
+      "Модель середовища");
+}
 function publicOracleText(value) {
-  return publicDemoModelTerm(publicHumanOrderTerm(value));
+  return publicEnvironmentModelTerm(
+    publicDemoModelTerm(publicHumanOrderTerm(value))
+  );
 }
 function publicReferenceText(value) {
   return String(value || "").replace(/(?:АТ|МС)[-–—]\s*\d{3}/gu,
@@ -1678,8 +1693,9 @@ export default {
       "скорочень «КЛВ» і «КЛВ/H» використовуй повну назву",
       "«Коефіцієнт людської впорядкованості».",
       "Так само замість «ДМС» пиши «Демонстраційна модель",
-      "середовища» у відповідному відмінку, зокрема",
-      "«розроблення Демонстраційної моделі середовища».",
+      "середовища», а замість окремого «МС» — «Модель середовища»,",
+      "з відповідним відмінюванням у реченні.",
+      "Зокрема: «розроблення Демонстраційної моделі середовища».",
       "Назви канонічних джерел і внутрішні пошукові позначення",
       "залишаються без змін.",
       "Для відвідувача в тексті відповіді показуй НАЗВИ",
