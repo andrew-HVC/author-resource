@@ -1160,10 +1160,28 @@ function publicReferenceName(id) {
 // the Atlas/episteme registries retain their original canonical labels.
 function publicHumanOrderTerm(value) {
   return String(value || "")
-    .replace(/Коефіцієнт людської впорядкованості\s*\(\s*КЛВ\s*\/\s*H\s*\)/giu,
+    .replace(/Коефіцієнт людської впорядкованості\s*\(\s*КЛВ(?:\s*\/\s*H)?\s*\)/giu,
       "Коефіцієнт людської впорядкованості")
-    .replace(/(?<![\p{L}\p{N}])КЛВ\s*\/\s*H(?![\p{L}\p{N}])/giu,
+    .replace(/(?<![\p{L}\p{N}])КЛВ(?:\s*\/\s*H)?(?![\p{L}\p{N}])/giu,
       "Коефіцієнт людської впорядкованості");
+}
+// Public text must spell out the research stage, including link labels.
+// Apply context-sensitive Ukrainian cases without rewriting canonical source data.
+function publicDemoModelTerm(value) {
+  return String(value || "")
+    .replace(/(Демонстраційн[а-яіїєґ]*\s+модел[а-яіїєґ]*\s+середовищ[а-яіїєґ]*)\s*\(\s*ДМС\s*\)/giu, "$1")
+    .replace(/(\]\(https?:\/\/[^)]*\))\s*\(\s*ДМС\s*\)/giu, "$1")
+    .replace(/(?<![\p{L}\p{N}])(в|у)\s+ДМС(?![\p{L}\p{N}])/giu,
+      "у Демонстраційній моделі середовища")
+    .replace(/(?<![\p{L}\p{N}])(до|для|без|після|щодо|розроблення|створення|підготовки|фінансування|планування|склад|етап|етапу|стадії|стадію|підготовку|підтримку)\s+ДМС(?![\p{L}\p{N}])/giu,
+      "$1 Демонстраційної моделі середовища")
+    .replace(/(?<![\p{L}\p{N}])ДМС(?=\s+ще\s+належить\s+розробити)/giu,
+      "Демонстраційну модель середовища")
+    .replace(/(?<![\p{L}\p{N}])ДМС(?![\p{L}\p{N}])/giu,
+      "Демонстраційна модель середовища");
+}
+function publicOracleText(value) {
+  return publicDemoModelTerm(publicHumanOrderTerm(value));
 }
 function publicReferenceText(value) {
   return String(value || "").replace(/(?:АТ|МС)[-–—]\s*\d{3}/gu,
@@ -1655,8 +1673,11 @@ export default {
       "Не ототожнюй авторські положення з доведеними фактами.",
       "Не спотворюй термінологію першоджерел.",
       "У публічних поясненнях і наступних питаннях замість",
-      "скорочення «КЛВ/H» використовуй повну назву",
+      "скорочень «КЛВ» і «КЛВ/H» використовуй повну назву",
       "«Коефіцієнт людської впорядкованості».",
+      "Так само замість «ДМС» пиши «Демонстраційна модель",
+      "середовища» у відповідному відмінку, зокрема",
+      "«розроблення Демонстраційної моделі середовища».",
       "Назви канонічних джерел і внутрішні пошукові позначення",
       "залишаються без змін.",
       "Для відвідувача в тексті відповіді показуй НАЗВИ",
@@ -4377,17 +4398,20 @@ export default {
         : decisiveDemoStageAnswer;
     return json({
       focus_applied: focusObject?.id || null,
-      answer: publicHumanOrderTerm(publicReferenceText(finalAnswer ||
+      answer: publicOracleText(publicReferenceText(finalAnswer ||
         "Не вдалося завершити відповідь. Спробуйте повторити запит коротше.")),
       sources: introducedModel ? sources : [],
       conversation_domain: domain,
       model_discovered: introducedModel || (modelDiscovered && !explicitNewTopic),
       suggestions: suggestions.map(item => ({
         ...item,
-        label: publicHumanOrderTerm(item.label),
-        query: publicHumanOrderTerm(item.query)
+        label: publicOracleText(item.label),
+        query: publicOracleText(item.query)
       })),
-      related_topics: relatedTopics,
+      related_topics: relatedTopics.map(item => ({
+        ...item,
+        label: publicOracleText(item.label)
+      })),
       engagement_offer: showEngagement,
       engagement_mode: engagementMode,
       engagement_focus: showEngagement
